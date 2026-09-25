@@ -9,7 +9,7 @@ def test_default_mcp_servers_include_rag_gateway():
 
 
 def test_default_empty_mcp_auth_tokens_are_allowed():
-    settings = Settings(mcp_servers="a,b")
+    settings = Settings(mcp_servers="a,b", mcp_server_names="web,code")
     configs = settings.mcp_server_configs()
     assert [(item.url, item.auth_token, item.name) for item in configs] == [
         ("a", None, "web"),
@@ -18,7 +18,11 @@ def test_default_empty_mcp_auth_tokens_are_allowed():
 
 
 def test_mcp_auth_tokens_support_empty_slots():
-    settings = Settings(mcp_servers="a,b", mcp_auth_tokens="token,", mcp_server_names="one,two")
+    settings = Settings(
+        mcp_servers="a,b",
+        mcp_auth_tokens="token,",
+        mcp_server_names="one,two",
+    )
     configs = settings.mcp_server_configs()
     assert configs[0].url == "a"
     assert configs[0].auth_token == "token"
@@ -35,6 +39,10 @@ def test_mcp_server_names_must_align():
 
 
 def test_mcp_auth_tokens_must_align():
-    settings = Settings(mcp_servers="a,b", mcp_auth_tokens="token")
+    settings = Settings(
+        mcp_servers="a,b",
+        mcp_auth_tokens="token",
+        mcp_server_names="web,code",
+    )
     with pytest.raises(ValueError, match="AGENT_MCP_AUTH_TOKENS"):
         settings.mcp_server_configs()
