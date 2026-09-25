@@ -11,10 +11,14 @@ app = FastAPI(title="Agent Core", version="0.1.0")
 
 @app.middleware("http")
 async def request_logging(request: Request, call_next):
-    import logging, time
+    import logging
+    import time
     started = time.perf_counter()
     response = await call_next(request)
-    logging.getLogger("agent_core").info("%s %s %s %.3f", request.method, request.url.path, response.status_code, time.perf_counter() - started)
+    logging.getLogger("agent_core").info(
+        "%s %s %s %.3f", request.method, request.url.path,
+        response.status_code, time.perf_counter() - started,
+    )
     return response
 
 @app.get("/health")
