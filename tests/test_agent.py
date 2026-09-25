@@ -40,7 +40,8 @@ class FakeClient:
 
 class FakeRegistry:
     async def list_tools(self):
-        tool = type("Tool", (), {"name": "echo", "description": "echo", "input_schema": {"type": "object"}, "server": "test"})
+        attrs = {"name": "echo", "description": "echo", "input_schema": {"type": "object"}, "server": "test"}
+        tool = type("Tool", (), attrs)
         return [tool()]
     async def call(self, server, name, arguments):
         assert (server, name, arguments) == ("test", "echo", {"text": "hello"})
