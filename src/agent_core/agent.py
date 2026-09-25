@@ -42,6 +42,12 @@ class Agent:
                     raise RuntimeError(f"unknown tool: {function.name}")
                 args = json.loads(function.arguments or "{}")
                 result = await self.registry.call(target.server, target.name, args)
-                messages.append({"role": "tool", "tool_call_id": call.id,
-                                 "content": ContextBudget(self.settings.max_tool_result_chars, self.settings.context_reserve_chars).bound(result)})
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": call.id,
+                    "content": ContextBudget(
+                        self.settings.max_tool_result_chars,
+                        self.settings.context_reserve_chars,
+                    ).bound(result),
+                })
         raise RuntimeError("agent iteration limit exceeded")
