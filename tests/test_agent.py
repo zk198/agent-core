@@ -2,7 +2,6 @@ import json
 import pytest
 from agent_core.agent import Agent
 from agent_core.config import Settings
-from agent_core.mcp_client import MCPRegistry
 
 class FakeFunction:
     name = "echo"
@@ -41,7 +40,8 @@ class FakeClient:
 
 class FakeRegistry:
     async def list_tools(self):
-        return [type("Tool", (), {"name": "echo", "description": "echo", "input_schema": {"type": "object"}, "server": "test"})()]
+        tool = type("Tool", (), {"name": "echo", "description": "echo", "input_schema": {"type": "object"}, "server": "test"})
+        return [tool()]
     async def call(self, server, name, arguments):
         assert (server, name, arguments) == ("test", "echo", {"text": "hello"})
         return {"ok": True}
