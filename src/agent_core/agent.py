@@ -1,5 +1,5 @@
 import json
-from typing import Any
+from typing import Any, cast
 from openai import AsyncOpenAI
 from .config import Settings
 from .mcp_client import MCPRegistry
@@ -21,7 +21,7 @@ class Agent:
             response = await self.client.chat.completions.create(
                 model=model or self.settings.model_name,
                 messages=messages,
-                tools=openai_tools or None,
+                tools=cast(Any, openai_tools or None),
             )
             choice = response.choices[0]
             if not choice.message.tool_calls:
@@ -38,7 +38,7 @@ class Agent:
                     raise RuntimeError("tool call limit exceeded")
                 target = next((t for t in tools if t.name == function.name), None)
                 if target is None:
-                    raise RuntimeError(f"unknown tool: {call.function.name}")
+                    raise RuntimeError(f"unknown tool: {function.name}")
                 args = json.loads(function.arguments or "{}")
                 result = await self.registry.call(target.server, target.name, args)
                 messages.append({"role": "tool", "tool_call_id": call.id,
