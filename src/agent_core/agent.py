@@ -2,6 +2,7 @@ import json
 from typing import Any, cast
 from openai import AsyncOpenAI
 from .config import Settings
+from .context import bound_text
 from .mcp_client import MCPRegistry
 
 class Agent:
@@ -42,5 +43,5 @@ class Agent:
                 args = json.loads(function.arguments or "{}")
                 result = await self.registry.call(target.server, target.name, args)
                 messages.append({"role": "tool", "tool_call_id": call.id,
-                                 "content": str(result)[:self.settings.max_tool_result_chars]})
+                                 "content": bound_text(result, self.settings.max_tool_result_chars)})
         raise RuntimeError("agent iteration limit exceeded")
