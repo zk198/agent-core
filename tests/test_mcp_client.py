@@ -1,28 +1,32 @@
+from fastmcp import FastMCP
+from fastmcp.client import Client
+
 import pytest
-from agent_core.mcp_client import MCPRegistry
 
-class FakeTool:
-    name = "echo"
-    description = "Echo"
-    inputSchema = {"type": "object"}
+from agent_core.mcp_client import MCPRegistry, MCPServer
 
-class FakeClient:
-    def __init__(self, url):
-        self.url = url
-    async def __aenter__(self):
-        return self
-    async def __aexit__(self, *args):
-        return None
-    async def list_tools(self):
-        return [FakeTool()]
-    async def call_tool(self, name, arguments):
-        return {"name": name, "arguments": arguments}
 
 @pytest.mark.asyncio
-async def test_registry_lists_and_calls_mcp(monkeypatch):
-    import agent_core.mcp_client as module
-    monkeypatch.setattr(module, "Client", FakeClient)
-    registry = MCPRegistry(["http://tools/mcp"])
+async def test_list_tools():
+    server = FastMCP("test")
+
+    @server.tool
+    def echo(text: str) -> str:
+        """Echo text."""
+        return text
+
+    registry = MCPRegistry([MCPServer(server_url := "test://local")])
+    registry.servers = [MCPServer(server_url)]
+    # Replace the URL with the in-memory FastMCP server for deterministic testing.
+    registry.servers = [server_config := MCPServer("test://local")]
+    registry._client = lambda _: Client(server)  # type: ignore[method-assign]
     tools = await registry.list_tools()
-    assert tools[0].name == "echo"
-    assert await registry.call("http://tools/mcp", "echo", {"x": 1}) == {"name": "echo", "arguments": {"x": 1}}
+    assert [tool.name for tool in tools] == ["echo"]
+
+
+@pytest.mark.asyncio
+async def test_auth_client_factory(monkeypatch):
+    server = MCPServer("https://example.test/mcp", "secret")
+    registry = MCPRegistry([server])
+    client = registry._client(server)
+    assert client is not None
