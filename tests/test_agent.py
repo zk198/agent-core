@@ -41,6 +41,7 @@ class FakeClient:
 class FakeRegistry:
     async def list_tools(self):
         attrs = {"name": "echo", "description": "echo", "input_schema": {"type": "object"}, "server": "test", "server_name": "web"}
+        attrs["model_name"] = "web__echo"
         tool = type("Tool", (), attrs)
         return [tool()]
     async def call(self, server, name, arguments):
