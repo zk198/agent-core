@@ -4,7 +4,7 @@ from agent_core.agent import Agent
 from agent_core.config import Settings
 
 class FakeFunction:
-    name = "echo"
+    name = "web__echo"
     arguments = json.dumps({"text": "hello"})
 
 class FakeCall:
@@ -40,7 +40,7 @@ class FakeClient:
 
 class FakeRegistry:
     async def list_tools(self):
-        attrs = {"name": "echo", "description": "echo", "input_schema": {"type": "object"}, "server": "test"}
+        attrs = {"name": "echo", "description": "echo", "input_schema": {"type": "object"}, "server": "test", "server_name": "web"}
         tool = type("Tool", (), attrs)
         return [tool()]
     async def call(self, server, name, arguments):
