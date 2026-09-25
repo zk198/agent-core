@@ -7,3 +7,7 @@ def test_health():
 def test_chat_request_validation():
     response = TestClient(app).post("/v1/chat", json={"message": ""})
     assert response.status_code == 422
+
+
+def test_health_is_local():
+    assert TestClient(app).get("/health").json() == {"status": "ok"}
