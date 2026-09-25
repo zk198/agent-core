@@ -15,17 +15,14 @@ async def test_list_tools():
         """Echo text."""
         return text
 
-    registry = MCPRegistry([MCPServer(server_url := "test://local")])
-    registry.servers = [MCPServer(server_url)]
-    # Replace the URL with the in-memory FastMCP server for deterministic testing.
-    registry.servers = [server_config := MCPServer("test://local")]
+    registry = MCPRegistry(["test://local"])
     registry._client = lambda _: Client(server)  # type: ignore[method-assign]
     tools = await registry.list_tools()
     assert [tool.name for tool in tools] == ["echo"]
 
 
 @pytest.mark.asyncio
-async def test_auth_client_factory(monkeypatch):
+async def test_auth_client_factory():
     server = MCPServer("https://example.test/mcp", "secret")
     registry = MCPRegistry([server])
     client = registry._client(server)
