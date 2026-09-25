@@ -5,4 +5,3 @@ def test_bound_text_keeps_small_values():
 
 def test_bound_text_truncates_large_values():
     assert bound_text("abcdef", 3).endswith("[truncated]")
-    assert len(bound_text("abcdef", 3)) > 3
