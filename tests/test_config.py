@@ -10,9 +10,10 @@ def test_default_mcp_servers_include_rag_gateway():
 
 def test_default_empty_mcp_auth_tokens_are_allowed():
     settings = Settings(mcp_servers="a,b")
-    assert settings.mcp_server_configs() == [
-        {"url": "a", "auth_token": None},
-        {"url": "b", "auth_token": None},
+    configs = settings.mcp_server_configs()
+    assert [(item.url, item.auth_token) for item in configs] == [
+        ("a", None),
+        ("b", None),
     ]
 
 
