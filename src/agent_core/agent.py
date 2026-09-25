@@ -2,7 +2,7 @@ import json
 from typing import Any, cast
 from openai import AsyncOpenAI
 from .config import Settings
-from .context import bound_text
+from .context import ContextBudget
 from .mcp_client import MCPRegistry
 
 class Agent:
