@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from .agent import Agent
 from .config import Settings
 from .mcp_client import MCPRegistry
@@ -9,9 +9,29 @@ registry = MCPRegistry([x.strip() for x in settings.mcp_servers.split(",") if x.
 agent = Agent(settings, registry)
 app = FastAPI(title="Agent Core", version="0.1.0")
 
+@app.middleware("http")
+async def request_logging(request: Request, call_next):
+    import logging
+    import time
+    started = time.perf_counter()
+    response = await call_next(request)
+    logging.getLogger("agent_core").info(
+        "%s %s %s %.3f", request.method, request.url.path,
+        response.status_code, time.perf_counter() - started,
+    )
+    return response
+
 @app.get("/health")
 async def health() -> dict[str, str]:
     return {"status": "ok"}
+
+@app.get("/ready")
+async def ready() -> dict[str, str]:
+    try:
+        await registry.list_tools()
+    except Exception:
+        return {"status": "not_ready"}
+    return {"status": "ready"}
 
 @app.get("/v1/tools", response_model=list[ToolInfo])
 async def tools() -> list[ToolInfo]:
