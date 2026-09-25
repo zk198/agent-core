@@ -1,21 +1,35 @@
 import json
 from typing import Any, cast
+
 from openai import AsyncOpenAI
+
 from .config import Settings
 from .context import ContextBudget
 from .mcp_client import MCPRegistry
+
 
 class Agent:
     def __init__(self, settings: Settings, registry: MCPRegistry) -> None:
         self.settings = settings
         self.registry = registry
-        self.client = AsyncOpenAI(base_url=settings.model_base_url, api_key=settings.model_api_key)
+        self.client = AsyncOpenAI(
+            base_url=settings.model_base_url,
+            api_key=settings.model_api_key,
+        )
 
     async def run(self, message: str, model: str | None = None) -> tuple[str, int, int]:
         tools = await self.registry.list_tools()
-        openai_tools: list[Any] = [{"type": "function", "function": {
-            "name": t.name, "description": t.description, "parameters": t.input_schema
-        }} for t in tools]
+        openai_tools: list[Any] = [
+            {
+                "type": "function",
+                "function": {
+                    "name": t.name,
+                    "description": t.description,
+                    "parameters": t.input_schema,
+                },
+            }
+            for t in tools
+        ]
         messages: list[Any] = [{"role": "user", "content": message}]
         tool_calls_total = 0
         for iteration in range(1, self.settings.max_iterations + 1):
@@ -42,12 +56,14 @@ class Agent:
                     raise RuntimeError(f"unknown tool: {function.name}")
                 args = json.loads(function.arguments or "{}")
                 result = await self.registry.call(target.server, target.name, args)
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": call.id,
-                    "content": ContextBudget(
-                        self.settings.max_tool_result_chars,
-                        self.settings.context_reserve_chars,
-                    ).bound(result),
-                })
+                messages.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": call.id,
+                        "content": ContextBudget(
+                            self.settings.max_tool_result_chars,
+                            self.settings.context_reserve_chars,
+                        ).bound(result),
+                    }
+                )
         raise RuntimeError("agent iteration limit exceeded")
