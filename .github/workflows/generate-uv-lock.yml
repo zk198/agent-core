@@ -1,6 +1,8 @@
 name: Generate UV lock
 on:
   workflow_dispatch:
+  push:
+    branches: [feat/uv-lock]
 jobs:
   lock:
     runs-on: ubuntu-latest
