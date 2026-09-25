@@ -12,10 +12,10 @@ class Agent:
 
     async def run(self, message: str, model: str | None = None) -> tuple[str, int, int]:
         tools = await self.registry.list_tools()
-        openai_tools = [{"type": "function", "function": {
+        openai_tools: list[Any] = [{"type": "function", "function": {
             "name": t.name, "description": t.description, "parameters": t.input_schema
         }} for t in tools]
-        messages: list[dict[str, Any]] = [{"role": "user", "content": message}]
+        messages: list[Any] = [{"role": "user", "content": message}]
         tool_calls_total = 0
         for iteration in range(1, self.settings.max_iterations + 1):
             response = await self.client.chat.completions.create(
@@ -28,6 +28,8 @@ class Agent:
                 return choice.message.content or "", iteration, tool_calls_total
             messages.append(choice.message.model_dump(exclude_none=True))
             for call in choice.message.tool_calls:
+                if getattr(call, "type", None) != "function":
+                    continue
                 tool_calls_total += 1
                 if tool_calls_total > self.settings.max_iterations * 2:
                     raise RuntimeError("tool call limit exceeded")
