@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Any
 from fastmcp import Client
 
-@dataclass
+@dataclass(frozen=True)
 class MCPTool:
     name: str
     description: str
@@ -17,8 +17,7 @@ class MCPRegistry:
         result: list[MCPTool] = []
         for url in self.servers:
             async with Client(url) as client:
-                tools = await client.list_tools()
-                for tool in tools:
+                for tool in await client.list_tools():
                     result.append(MCPTool(
                         name=tool.name,
                         description=tool.description or "",
