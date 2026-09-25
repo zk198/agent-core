@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from collections.abc import Sequence
 from typing import Any
 
 from fastmcp import Client
@@ -20,7 +21,7 @@ class MCPTool:
 
 
 class MCPRegistry:
-    def __init__(self, servers: list[MCPServer | str]) -> None:
+    def __init__(self, servers: Sequence[MCPServer | str]) -> None:
         self.servers = [
             server if isinstance(server, MCPServer) else MCPServer(server)
             for server in servers
