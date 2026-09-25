@@ -10,6 +10,13 @@ from fastmcp.client.auth import BearerAuth
 class MCPServer:
     url: str
     auth_token: str | None = None
+    name: str | None = None
+
+    @property
+    def tool_namespace(self) -> str:
+        if self.name:
+            return self.name
+        return self.url.rstrip("/").rsplit("/", 1)[-1] or "mcp"
 
 
 @dataclass(frozen=True)
@@ -18,6 +25,17 @@ class MCPTool:
     description: str
     input_schema: dict[str, Any]
     server: str
+    server_name: str
+
+    @property
+    def qualified_name(self) -> str:
+        """Canonical host-side identity: MCP server name + tool name."""
+        return f"{self.server_name}.{self.name}"
+
+    @property
+    def model_name(self) -> str:
+        """Provider-safe model-facing alias for OpenAI-compatible APIs."""
+        return f"{self.server_name}__{self.name}"
 
 
 class MCPRegistry:
@@ -41,8 +59,9 @@ class MCPRegistry:
                         MCPTool(
                             name=tool.name,
                             description=tool.description or "",
-                            input_schema=tool.inputSchema,
+                            input_schema=tool.input_schema,
                             server=server.url,
+                            server_name=server.tool_namespace,
                         )
                     )
         return result
