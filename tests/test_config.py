@@ -27,5 +27,6 @@ def test_mcp_auth_tokens_support_empty_slots():
 
 
 def test_mcp_auth_tokens_must_align():
-    with pytest.raises(ValueError):
-        Settings(mcp_servers="a,b", mcp_auth_tokens="token")
+    settings = Settings(mcp_servers="a,b", mcp_auth_tokens="token")
+    with pytest.raises(ValueError, match="AGENT_MCP_AUTH_TOKENS"):
+        settings.mcp_server_configs()
