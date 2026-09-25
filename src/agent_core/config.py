@@ -6,5 +6,6 @@ class Settings(BaseSettings):
     model_name: str = "local/default"
     max_iterations: int = 8
     max_tool_result_chars: int = 20_000
+    context_reserve_chars: int = 4_000
     mcp_servers: str = "http://agent-tools-web:8001/mcp,http://agent-tools-code:8001/mcp"
     model_config = SettingsConfigDict(env_prefix="AGENT_")
