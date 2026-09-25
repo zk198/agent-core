@@ -1,0 +1,18 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v7
+        with: {version: "0.10.0"}
+      - run: uv lock
+      - run: uv sync --all-groups
+      - run: uv run ruff check .
+      - run: uv run mypy src
+      - run: uv run pytest --cov=agent_core --cov-report=term-missing
+      - run: docker build -t agent-core:test .
