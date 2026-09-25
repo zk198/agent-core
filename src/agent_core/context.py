@@ -11,4 +11,4 @@ class ContextBudget:
         return text if len(text) <= limit else text[:limit] + "\n[truncated]"
 
 def bound_text(value: Any, max_chars: int) -> str:
-    return ContextBudget(max_chars).bound(value)
+    return ContextBudget(max_chars, 0).bound(value)
