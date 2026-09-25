@@ -16,11 +16,15 @@ class Settings(BaseSettings):
         "http://rag-gateway:8001/mcp"
     )
     mcp_auth_tokens: str = ""
+    mcp_server_names: str = "web,code,rag"
 
     model_config = SettingsConfigDict(env_prefix="AGENT_")
 
     def mcp_server_configs(self) -> list[MCPServer]:
         urls = [value.strip() for value in self.mcp_servers.split(",") if value.strip()]
+        names = [value.strip() for value in self.mcp_server_names.split(",") if value.strip()]
+        if len(names) != len(urls):
+            raise ValueError("AGENT_MCP_SERVER_NAMES must match AGENT_MCP_SERVERS")
         raw_tokens = self.mcp_auth_tokens.strip()
         tokens = [] if not raw_tokens else [
             value.strip() for value in self.mcp_auth_tokens.split(",")
@@ -28,6 +32,10 @@ class Settings(BaseSettings):
         if tokens and len(tokens) != len(urls):
             raise ValueError("AGENT_MCP_AUTH_TOKENS must match AGENT_MCP_SERVERS")
         return [
-            MCPServer(url=url, auth_token=(tokens[index] or None) if tokens else None)
+            MCPServer(
+                url=url,
+                auth_token=(tokens[index] or None) if tokens else None,
+                name=names[index],
+            )
             for index, url in enumerate(urls)
         ]
