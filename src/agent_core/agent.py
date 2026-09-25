@@ -23,7 +23,7 @@ class Agent:
             {
                 "type": "function",
                 "function": {
-                    "name": t.name,
+                    "name": t.model_name,
                     "description": t.description,
                     "parameters": t.input_schema,
                 },
@@ -51,7 +51,7 @@ class Agent:
                 tool_calls_total += 1
                 if tool_calls_total > self.settings.max_iterations * 2:
                     raise RuntimeError("tool call limit exceeded")
-                target = next((t for t in tools if t.name == function.name), None)
+                target = next((t for t in tools if t.model_name == function.name), None)
                 if target is None:
                     raise RuntimeError(f"unknown tool: {function.name}")
                 args = json.loads(function.arguments or "{}")
