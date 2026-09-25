@@ -30,13 +30,16 @@ class Agent:
             for call in choice.message.tool_calls:
                 if getattr(call, "type", None) != "function":
                     continue
+                function = getattr(call, "function", None)
+                if function is None:
+                    continue
                 tool_calls_total += 1
                 if tool_calls_total > self.settings.max_iterations * 2:
                     raise RuntimeError("tool call limit exceeded")
-                target = next((t for t in tools if t.name == call.function.name), None)
+                target = next((t for t in tools if t.name == function.name), None)
                 if target is None:
                     raise RuntimeError(f"unknown tool: {call.function.name}")
-                args = json.loads(call.function.arguments or "{}")
+                args = json.loads(function.arguments or "{}")
                 result = await self.registry.call(target.server, target.name, args)
                 messages.append({"role": "tool", "tool_call_id": call.id,
                                  "content": str(result)[:self.settings.max_tool_result_chars]})
