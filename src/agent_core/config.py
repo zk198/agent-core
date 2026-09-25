@@ -21,7 +21,10 @@ class Settings(BaseSettings):
 
     def mcp_server_configs(self) -> list[MCPServer]:
         urls = [value.strip() for value in self.mcp_servers.split(",") if value.strip()]
-        tokens = [value.strip() for value in self.mcp_auth_tokens.split(",")]
+        raw_tokens = self.mcp_auth_tokens.strip()
+        tokens = [] if not raw_tokens else [
+            value.strip() for value in self.mcp_auth_tokens.split(",")
+        ]
         if tokens and len(tokens) != len(urls):
             raise ValueError("AGENT_MCP_AUTH_TOKENS must match AGENT_MCP_SERVERS")
         return [
