@@ -29,8 +29,8 @@ async def test_duplicate_tool_names_are_distinct_across_servers():
     web_server = FastMCP("web")
     code_server = FastMCP("code")
 
-    @web_server.tool
-    def echo(text: str) -> str:
+    @web_server.tool(name="echo")
+    def web_echo(text: str) -> str:
         """Web echo."""
         return f"web:{text}"
 
