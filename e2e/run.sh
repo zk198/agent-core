@@ -50,7 +50,7 @@ wait_for() {
   deadline=$(($(date +%s) + 180))
   log "waiting for $name: $url"
   while ! curl -fsS --max-time 3 "$url" >/dev/null; do
-    if [ "$(date +%s)" -ge "$deadline" ]; then
+    if [ "$(date +%s)" -ge "$deadline" ] || [ "$(date +%s)" -ge "$overall_deadline" ]; then
       log "timeout waiting for $name"
       dump_state
       exit 1
@@ -75,6 +75,7 @@ $compose build --progress=plain postgres qdrant pst-agent rag-indexer rag-retrie
 
 log "starting focused full RAG path"
 $compose up -d postgres qdrant pst-agent rag-indexer rag-retrieval mock-llm agent-core ai-gateway
+overall_deadline=$(($(date +%s) + 480))
 
 wait_for_agent() {
   deadline=$(($(date +%s) + 180))
@@ -104,11 +105,19 @@ while [ "$i" -lt 120 ]; do
     break
   fi
   i=$((i + 1))
+  if [ $((i % 10)) -eq 0 ]; then
+    log "retrieval still waiting; service status"
+    $compose ps || true
+    for service in pst-agent rag-indexer rag-retrieval ai-gateway; do
+      log "recent logs: $service"
+      $compose logs --no-color --timestamps --tail=40 "$service" || true
+    done
+  fi
   sleep 2
 done
 [ "$i" -lt 120 ]
 
-log "calling agent directly"
+log "marker indexed; calling agent directly"
 $compose exec -T agent-core python -c 'import httpx; r=httpx.post("http://127.0.0.1:8000/api/v1/chat", json={"message":"Find the RAG E2E marker."}, timeout=60); print(r.text); r.raise_for_status()' | tee "$log_dir/agent-chat.json"
 grep -q 'RAG_E2E_OK' "$log_dir/agent-chat.json"
 
