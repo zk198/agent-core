@@ -7,7 +7,7 @@ from openai import AsyncOpenAI
 
 from .config import Settings
 from .context import ContextBudget
-from .mcp_client import MCPRegistry, MCPTool
+from .mcp_client import MCPRegistry
 
 logger = logging.getLogger(__name__)
 
