@@ -108,3 +108,70 @@ jobs:
           name: agent-core-fast-e2e-logs
           path: ${{ runner.temp }}/rag-e2e-fast
           if-no-files-found: ignore
+
+  full-rag-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+
+      - name: Checkout RAG infrastructure
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          repository: zk198/rag-infra
+          ref: phase-1c-ai-gateway-integration
+          path: ../rag-infra
+
+      - name: Checkout RAG ingestion
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30af803
+        with:
+          repository: zk198/rag-ingestion
+          ref: main
+          path: ../rag-ingestion
+
+      - name: Checkout RAG indexer
+        uses: actions/checkout@d23441a48e516b6c34aea1a2e8ad9016488ae2f0f9933ca
+        with:
+          repository: zk198/rag-indexer
+          ref: main
+          path: ../rag-indexer
+
+      - name: Checkout RAG retrieval
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          repository: zk198/rag-retrieval
+          ref: main
+          path: ../rag-retrieval
+
+      - name: Checkout AI gateway
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          repository: zk198/ai-gateway
+          ref: phase-1c-ai-gateway-session
+          path: ../ai-gateway
+
+      - name: Checkout web tools
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          repository: zk198/agent-tools-web
+          ref: main
+          path: ../agent-tools-web
+
+      - name: Checkout code tools
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          repository: zk198/agent-tools-code
+          ref: main
+          path: ../agent-tools-code
+
+      - name: Run focused full RAG E2E
+        env:
+          RAG_JWT_SECRET: e2e-ci-only-secret
+        run: sh ./e2e/run.sh
+
+      - name: Upload full E2E logs
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: agent-core-full-rag-e2e-logs
+          path: ${{ runner.temp }}/rag-e2e-full
+          if-no-files-found: ignore
