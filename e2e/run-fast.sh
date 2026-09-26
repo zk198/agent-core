@@ -66,7 +66,7 @@ $compose config > "$log_dir/compose-config.txt"
 
 build() {
   log "building fast E2E services"
-  $compose build --progress=plain 2>&1 | tee "$log_dir/build.log"
+  $compose build --progress=plain "$@" 2>&1 | tee "$log_dir/build.log"
 }
 
 start() {
