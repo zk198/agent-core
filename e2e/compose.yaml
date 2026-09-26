@@ -4,7 +4,7 @@ services:
       - "18001:8200"
 
   agent-core:
-    build: .
+    build: ..
     ports:
       - "18000:8000"
     environment:
@@ -22,5 +22,5 @@ services:
 
   mock-llm:
     build:
-      context: .
+      context: ..
       dockerfile: e2e/mock-llm/Dockerfile
