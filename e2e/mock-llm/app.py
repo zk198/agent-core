@@ -29,6 +29,49 @@ class Handler(BaseHTTPRequestHandler):
         messages = request.get("messages", [])
         has_tool_result = any(message.get("role") == "tool" for message in messages)
 
+        if request.get("stream"):
+            payloads = []
+            if not has_tool_result:
+                payloads.append({
+                    "id": "e2e-tool-call",
+                    "object": "chat.completion.chunk",
+                    "choices": [{
+                        "index": 0,
+                        "delta": {
+                            "role": "assistant",
+                            "tool_calls": [{
+                                "index": 0,
+                                "id": "call-rag-search",
+                                "type": "function",
+                                "function": {
+                                    "name": "rag__search_knowledge",
+                                    "arguments": json.dumps({"query": "RAG_E2E_MARKER", "limit": 3}),
+                                },
+                            }],
+                        },
+                        "finish_reason": "tool_calls",
+                    }],
+                })
+            else:
+                payloads.append({
+                    "id": "e2e-final",
+                    "object": "chat.completion.chunk",
+                    "choices": [{
+                        "index": 0,
+                        "delta": {"role": "assistant", "content": "RAG_E2E_STREAM_OK: retrieved the indexed marker through MCP."},
+                        "finish_reason": "stop",
+                    }],
+                })
+            data = "".join(f"data: {json.dumps(payload)}\\n\\n" for payload in payloads) + "data: [DONE]\\n\\n"
+            raw = data.encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Content-Length", str(len(raw)))
+            self.end_headers()
+            self.wfile.write(raw)
+            return
+
         if not has_tool_result:
             self._send({
                 "id": "e2e-tool-call",
