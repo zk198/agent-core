@@ -142,7 +142,7 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           repository: zk198/ai-gateway
-          ref: main
+          ref: fix/standardize-health-endpoint
           path: ai-gateway
 
 
