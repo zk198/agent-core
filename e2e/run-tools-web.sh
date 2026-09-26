@@ -34,8 +34,21 @@ for service in mock-llm mock-search searxng web agent-core; do
   done
 done
 
-$compose exec -T web python -c 'import urllib.request; urllib.request.urlopen("http://searxng:8080/search?q=E2E_TOOLS_WEB_MARKER&format=json", timeout=10).read()' > "$log_dir/searxng.json"
+wait_http() {
+  name="$1"
+  url="$2"
+  deadline=$(($(date +%s) + 180))
+  while ! $compose exec -T web python -c "import urllib.request; urllib.request.urlopen('$url', timeout=5).read()" >/dev/null 2>&1; do
+    [ "$(date +%s)" -lt "$deadline" ] || { echo "timeout waiting for $name"; dump_state; exit 1; }
+    sleep 2
+  done
+}
+wait_http "SearXNG" "http://searxng:8080/search?q=E2E_TOOLS_WEB_MARKER&format=json"
+wait_http "web tool" "http://127.0.0.1:8000/health"
+$compose exec -T web python -c 'import urllib.request; print(urllib.request.urlopen("http://searxng:8080/search?q=E2E_TOOLS_WEB_MARKER&format=json", timeout=10).read().decode())' > "$log_dir/searxng.json"
 grep -q 'E2E_TOOLS_WEB_MARKER' "$log_dir/searxng.json"
+
+$compose exec -T agent-core python -c 'import urllib.request; urllib.request.urlopen("http://127.0.0.1:8000/api/v1/health", timeout=10).read()'
 
 $compose exec -T agent-core python -c '
 import httpx
