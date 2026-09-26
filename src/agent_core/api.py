@@ -97,7 +97,15 @@ async def answer_stream(request: AnswerRequest) -> StreamingResponse:
                         }
                         for index, citation in enumerate(item["citations"], start=1)
                     ]
-                    yield f"event: done\\ndata: {json.dumps({'citations': citations, 'iterations': item['iterations'], 'tool_calls': item['tool_calls']}, ensure_ascii=False)}\\n\\n"
+                    payload = json.dumps(
+                        {
+                            "citations": citations,
+                            "iterations": item["iterations"],
+                            "tool_calls": item["tool_calls"],
+                        },
+                        ensure_ascii=False,
+                    )
+                    yield f"event: done\\ndata: {payload}\\n\\n"
         except Exception:
             logger.exception("grounded_answer_stream_failed")
             yield f"event: error\\ndata: {json.dumps({'detail': 'grounded answer dependency failed'})}\\n\\n"
