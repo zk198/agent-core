@@ -31,15 +31,15 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Checkout RAG gateway
+      - name: Checkout AI gateway
         uses: actions/checkout@v6
         with:
-          repository: zk198/rag-gateway
-          ref: f1d3b42c1a0f58a73f546aee1240e6cb85226ac8
-          path: rag-gateway
+          repository: zk198/ai-gateway
+          ref: phase-1c-ai-gateway-session
+          path: ai-gateway
 
-      - name: Build RAG gateway image
-        run: docker build --progress=plain -t rag-gateway:e2e ./rag-gateway
+      - name: Build AI gateway image
+        run: docker build --progress=plain -t ai-gateway:e2e ./ai-gateway
 
       - name: Build agent-core image
         run: docker build --progress=plain -t agent-core:e2e .
@@ -55,7 +55,7 @@ jobs:
           RAG_JWT_SECRET: e2e-ci-only-secret
         run: sh ./e2e/run-fast.sh start-mocks
 
-      - name: Start RAG gateway
+      - name: Start AI gateway
         env:
           RAG_JWT_SECRET: e2e-ci-only-secret
         run: sh ./e2e/run-fast.sh start-gateway
@@ -70,7 +70,7 @@ jobs:
           RAG_JWT_SECRET: e2e-ci-only-secret
         run: sh ./e2e/run-fast.sh wait-agent
 
-      - name: Wait for RAG gateway
+      - name: Wait for AI gateway
         env:
           RAG_JWT_SECRET: e2e-ci-only-secret
         run: sh ./e2e/run-fast.sh wait-gateway
