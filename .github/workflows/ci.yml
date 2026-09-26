@@ -1,4 +1,5 @@
 name: CI
+# Tool E2Es use the MCP-server container branches until merged.
 on:
   pull_request:
   push:
