@@ -99,11 +99,10 @@ async def test_agent_rejects_malformed_tool_arguments():
                 tool_calls = [BadCall()]
                 content = None
 
-            self.chat.completions = type(
-                "C",
-                (),
-                {"create": lambda _self, **kwargs: FakeResponse(BadToolMessage())},
-            )()
+            async def create(**kwargs):
+                return FakeResponse(BadToolMessage())
+
+            self.chat.completions = type("C", (), {"create": create})()
 
     agent = Agent(Settings(max_iterations=3), FakeRegistry())
     agent.client = BadArgs()
