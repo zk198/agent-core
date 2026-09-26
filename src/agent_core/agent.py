@@ -208,15 +208,17 @@ class Agent:
                     target.name,
                 )
                 result = await self.registry.call(target.server, target.name, args)
+                new_evidence: list[CitationEvidence] = []
                 if collect_citations and target.server_name == "rag":
                     for item in _extract_rag_evidence(result):
                         if item not in evidence:
                             evidence.append(item)
+                            new_evidence.append(item)
                 result_text = _result_text(result)
-                if collect_citations and target.server_name == "rag":
-                    start = len(evidence) - len(_extract_rag_evidence(result)) + 1
+                if new_evidence:
+                    start = len(evidence) - len(new_evidence) + 1
                     result_text = f"RAG evidence sources S{start}..S{len(evidence)}:\n{result_text}"
-                    for index, item in enumerate(evidence[start - 1 :], start=start):
+                    for index, item in enumerate(new_evidence, start=start):
                         result_text += f"\n[S{index}] source={item.source_name} chunk={item.chunk_id}: {item.text}"
                 messages.append(
                     {
