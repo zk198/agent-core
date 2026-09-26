@@ -70,7 +70,7 @@ wait_mcp() {
     sleep 2
   done
 }
-wait_mcp "code MCP" "http://code-api:8001/mcp/" "run_python"
+wait_mcp "code MCP" "http://code-api:8001/mcp" "run_python"
 $compose exec -T agent-core python -c 'import urllib.request; urllib.request.urlopen("http://127.0.0.1:8000/api/v1/health", timeout=10).read()'
 
 $compose exec -T agent-core python -c '
