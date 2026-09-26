@@ -76,15 +76,23 @@ start_mocks() {
   $compose up -d mock-retrieval
 }
 start_gateway() {
-  log "starting RAG gateway"
-  $compose up -d rag-gateway
+  log "starting AI gateway"
+  $compose up -d ai-gateway
 }
 start_agent() {
   log "starting agent-core"
   $compose up -d agent-core
 }
 wait_agent() { wait_for "agent-core" "http://localhost:18000/api/v1/health"; }
-wait_gateway() { wait_for "rag-gateway" "http://localhost:18001/healthz"; }
+wait_gateway() { wait_for "ai-gateway" "http://localhost:18001/healthz"; }
+
+gateway_chat() {
+  log "calling agent through ai-gateway session boundary"
+  curl -fsS --max-time 60     -X POST     -H "Content-Type: application/json"     -H "Authorization: Bearer $RAG_E2E_TOKEN"     -d '{"messages":[{"role":"user","content":"Find the RAG E2E marker."}]}'     http://localhost:18001/v1/chat/completions | tee "$log_dir/gateway-chat.json"
+  grep -q 'RAG_E2E_OK' "$log_dir/gateway-chat.json"
+  grep -q '"conversation_id"' "$log_dir/gateway-chat.json"
+  log "gateway session E2E passed"
+}
 
 discover() {
   log "discovering MCP tools through agent-core"
@@ -130,6 +138,7 @@ case "${1:-all}" in
   wait-gateway) wait_gateway ;;
   discover) discover ;;
   chat) chat ;;
+  gateway-chat) gateway_chat ;;
   stream) stream ;;
   cleanup) cleanup ;;
   all)
@@ -140,7 +149,7 @@ case "${1:-all}" in
     chat
     ;;
   *)
-    echo "usage: $0 [build|start-mocks|start-gateway|start-agent|start|wait-agent|wait-gateway|discover|chat|stream|cleanup|all]" >&2
+    echo "usage: $0 [build|start-mocks|start-gateway|start-agent|start|wait-agent|wait-gateway|discover|chat|gateway-chat|stream|cleanup|all]" >&2
     exit 2
     ;;
 esac
