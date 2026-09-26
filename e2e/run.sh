@@ -17,6 +17,13 @@ print(f"{header}.{payload}.{b64(signature)}")
 PY
 )"
 
+export AGENT_MODEL_BASE_URL="http://mock-llm:8080/v1"
+export AGENT_MODEL_API_KEY="e2e"
+export AGENT_MODEL_NAME="e2e/mock"
+export AGENT_MCP_SERVER_NAMES="rag"
+export AGENT_MCP_SERVERS="http://ai-gateway:8200/mcp/"
+export AGENT_MCP_AUTH_TOKENS="$RAG_E2E_TOKEN"
+
 compose="docker compose -f ../rag-infra/compose.yaml -f e2e/compose.yaml"
 log_dir="${RUNNER_TEMP:-/tmp}/rag-e2e-full"
 mkdir -p "$log_dir"
@@ -66,7 +73,20 @@ $compose build --progress=plain postgres qdrant pst-agent rag-indexer rag-retrie
 log "starting focused full RAG path"
 $compose up -d postgres qdrant pst-agent rag-indexer rag-retrieval mock-llm agent-core ai-gateway
 
-wait_for "agent-core" "http://localhost:18000/api/v1/health"
+wait_for_agent() {
+  deadline=$(($(date +%s) + 180))
+  log "waiting for agent-core"
+  while ! $compose exec -T agent-core python -c 'import urllib.request; urllib.request.urlopen("http://127.0.0.1:8000/api/v1/health", timeout=2)' >/dev/null 2>&1; do
+    if [ "$(date +%s)" -ge "$deadline" ]; then
+      log "timeout waiting for agent-core"
+      dump_state
+      exit 1
+    fi
+    sleep 2
+  done
+  log "agent-core ready"
+}
+wait_for_agent
 wait_for "ai-gateway" "http://localhost:18001/healthz"
 
 log "uploading marker"
@@ -86,7 +106,7 @@ done
 [ "$i" -lt 120 ]
 
 log "calling agent directly"
-curl -fsS --max-time 60   -X POST   -H "Content-Type: application/json"   -d '{"message":"Find the RAG E2E marker."}'   http://localhost:18000/api/v1/chat | tee "$log_dir/agent-chat.json"
+$compose exec -T agent-core python -c 'import httpx; r=httpx.post("http://127.0.0.1:8000/api/v1/chat", json={"message":"Find the RAG E2E marker."}, timeout=60); print(r.text); r.raise_for_status()' | tee "$log_dir/agent-chat.json"
 grep -q 'RAG_E2E_OK' "$log_dir/agent-chat.json"
 
 log "calling agent through ai-gateway"
