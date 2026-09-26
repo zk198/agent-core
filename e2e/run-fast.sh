@@ -69,9 +69,17 @@ build() {
   $compose build --progress=plain "$@" 2>&1 | tee "$log_dir/build.log"
 }
 
-start() {
-  log "starting fast E2E services"
-  $compose up -d
+start_mocks() {
+  log "starting mock services"
+  $compose up -d mock-llm mock-retrieval
+}
+start_gateway() {
+  log "starting RAG gateway"
+  $compose up -d rag-gateway
+}
+start_agent() {
+  log "starting agent-core"
+  $compose up -d agent-core
 }
 wait_agent() { wait_for "agent-core" "http://localhost:18000/api/v1/health"; }
 wait_gateway() { wait_for "rag-gateway" "http://localhost:18001/healthz"; }
@@ -100,7 +108,7 @@ cleanup() {
 
 case "${1:-all}" in
   build) build ;;
-  start) start ;;\n  wait-agent) wait_agent ;;\n  wait-gateway) wait_gateway ;;
+  start-mocks) start_mocks ;;\n  start-gateway) start_gateway ;;\n  start-agent) start_agent ;;\n  start) start_mocks; start_gateway; start_agent ;;\n  wait-agent) wait_agent ;;\n  wait-gateway) wait_gateway ;;
   discover) discover ;;
   chat) chat ;;
   cleanup) cleanup ;;
@@ -112,7 +120,7 @@ case "${1:-all}" in
     chat
     ;;
   *)
-    echo "usage: $0 [build|start|wait-agent|wait-gateway|discover|chat|cleanup|all]" >&2
+    echo "usage: $0 [build|start-mocks|start-gateway|start-agent|start|wait-agent|wait-gateway|discover|chat|cleanup|all]" >&2
     exit 2
     ;;
 esac
