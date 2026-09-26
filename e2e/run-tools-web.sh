@@ -45,6 +45,17 @@ wait_http() {
 }
 wait_http "SearXNG" "http://searxng:8080/search?q=E2E_TOOLS_WEB_MARKER&format=json"
 wait_http "web tool" "http://127.0.0.1:8000/health"
+wait_mcp() {
+  name="$1"
+  url="$2"
+  expected="$3"
+  deadline=$(($(date +%s) + 180))
+  while ! $compose exec -T agent-core python -c "import asyncio; from fastmcp import Client; async def main():\n  async with Client('$url') as client:\n    names=[tool.name for tool in await client.list_tools()]\n    assert '$expected' in names, names\nasyncio.run(main())" >/dev/null 2>&1; do
+    [ "$(date +%s)" -lt "$deadline" ] || { echo "timeout waiting for $name MCP"; dump_state; exit 1; }
+    sleep 2
+  done
+}
+wait_mcp "web MCP" "http://web:8001/mcp/" "web_search"
 $compose exec -T web python -c 'import urllib.request; print(urllib.request.urlopen("http://searxng:8080/search?q=E2E_TOOLS_WEB_MARKER&format=json", timeout=10).read().decode())' > "$log_dir/searxng.json"
 grep -q 'E2E_TOOLS_WEB_MARKER' "$log_dir/searxng.json"
 
