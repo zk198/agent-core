@@ -99,8 +99,23 @@ class Agent:
         system_prompt: str | None = None,
         allowed_server_names: set[str] | None = None,
     ) -> tuple[str, int, int]:
+        return await self.run_messages(
+            [{"role": "user", "content": message}],
+            model,
+            system_prompt=system_prompt,
+            allowed_server_names=allowed_server_names,
+        )
+
+    async def run_messages(
+        self,
+        messages: list[dict[str, Any]],
+        model: str | None = None,
+        *,
+        system_prompt: str | None = None,
+        allowed_server_names: set[str] | None = None,
+    ) -> tuple[str, int, int]:
         result = await self._run(
-            message,
+            messages,
             model,
             system_prompt=system_prompt,
             allowed_server_names=allowed_server_names,
@@ -109,7 +124,7 @@ class Agent:
 
     async def run_grounded_answer(self, question: str, model: str | None = None) -> AgentResult:
         return await self._run(
-            question,
+            [{"role": "user", "content": question}],
             model,
             system_prompt=(
                 "You are a grounded knowledge assistant. Answer using only evidence returned "
@@ -234,7 +249,7 @@ class Agent:
 
     async def _run(
         self,
-        message: str,
+        input_messages: list[dict[str, Any]],
         model: str | None = None,
         *,
         system_prompt: str | None = None,
@@ -259,10 +274,9 @@ class Agent:
             }
             for tool in tools
         ]
-        messages: list[Any] = []
+        messages: list[Any] = [dict(message) for message in input_messages]
         if system_prompt:
-            messages.append({"role": "system", "content": system_prompt})
-        messages.append({"role": "user", "content": message})
+            messages.insert(0, {"role": "system", "content": system_prompt})
         tool_calls_total = 0
         evidence: list[CitationEvidence] = []
 

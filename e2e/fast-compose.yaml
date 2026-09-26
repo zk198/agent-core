@@ -1,13 +1,17 @@
 services:
-  rag-gateway:
-    image: rag-gateway:e2e
+  ai-gateway:
+    image: ai-gateway:e2e
     environment:
       RAG_RETRIEVAL_URL: http://mock-retrieval:8100
       RAG_INGESTION_URL: http://mock-retrieval:8100
+      AI_AGENT_URL: http://agent-core:8000
+      AI_POSTGRES_DSN: postgresql://rag:rag@postgres:5432/rag
       RAG_JWT_SECRET: ${RAG_JWT_SECRET:?set RAG_JWT_SECRET}
     ports:
       - "18001:8200"
     depends_on:
+      postgres:
+        condition: service_healthy
       mock-retrieval:
         condition: service_started
 
@@ -19,11 +23,11 @@ services:
       AGENT_MODEL_BASE_URL: http://mock-llm:8080/v1
       AGENT_MODEL_API_KEY: e2e
       AGENT_MODEL_NAME: e2e/mock
-      AGENT_MCP_SERVERS: http://rag-gateway:8200/mcp/
+      AGENT_MCP_SERVERS: http://ai-gateway:8200/mcp/
       AGENT_MCP_AUTH_TOKENS: ${RAG_E2E_TOKEN:-}
       AGENT_MCP_SERVER_NAMES: rag
     depends_on:
-      rag-gateway:
+      ai-gateway:
         condition: service_started
       mock-llm:
         condition: service_started
@@ -33,3 +37,15 @@ services:
 
   mock-retrieval:
     image: mock-retrieval:e2e
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: rag
+      POSTGRES_PASSWORD: rag
+      POSTGRES_DB: rag
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rag -d rag"]
+      interval: 2s
+      timeout: 2s
+      retries: 15

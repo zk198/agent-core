@@ -70,9 +70,17 @@ async def tools() -> list[ToolInfo]:
 @app.post("/api/v1/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest) -> ChatResponse:
     try:
-        content, iterations, tool_calls = await agent.run(request.message, request.model)
+        if request.messages:
+            input_messages = [item.model_dump() for item in request.messages]
+        elif request.message:
+            input_messages = [{"role": "user", "content": request.message}]
+        else:
+            raise HTTPException(status_code=422, detail="message or messages is required")
+        content, iterations, tool_calls = await agent.run_messages(input_messages, request.model)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.exception("agent_run_failed")
         raise HTTPException(status_code=502, detail="agent dependency failed") from exc
