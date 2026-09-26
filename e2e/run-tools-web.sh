@@ -71,7 +71,7 @@ wait_mcp() {
     sleep 2
   done
 }
-wait_mcp "web MCP" "http://web:8001/mcp/" "web_search"
+wait_mcp "web MCP" "http://web:8001/mcp" "web_search"
 $compose exec -T web python -c 'import urllib.request; print(urllib.request.urlopen("http://searxng:8080/search?q=E2E_TOOLS_WEB_MARKER&format=json", timeout=10).read().decode())' > "$log_dir/searxng.json"
 grep -q 'E2E_TOOLS_WEB_MARKER' "$log_dir/searxng.json"
 
