@@ -41,7 +41,7 @@ services:
       AGENT_MODEL_BASE_URL: http://mock-llm:8080/v1
       AGENT_MODEL_API_KEY: e2e
       AGENT_MODEL_NAME: e2e/mock
-      AGENT_MCP_SERVERS: http://code-api:8001/mcp
+      AGENT_MCP_SERVERS: http://code-api:8001/mcp/
       AGENT_MCP_SERVER_NAMES: code
     depends_on:
       mock-llm:
