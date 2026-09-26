@@ -35,7 +35,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: zk198/rag-gateway
-          ref: 441a0c2e11fe4d01c9bd30694da8058d4f63e420
+          ref: f1d3b42c1a0f58a73f546aee1240e6cb85226ac8
           path: rag-gateway
 
       - name: Run fast agent E2E
