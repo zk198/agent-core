@@ -6,7 +6,7 @@ from fastapi import FastAPI, HTTPException, Request
 from .agent import Agent
 from .config import Settings
 from .mcp_client import MCPRegistry
-from .models import ChatRequest, ChatResponse, ToolInfo
+from .models import AnswerRequest, AnswerResponse, ChatRequest, ChatResponse, Citation, ToolInfo
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("agent_core")
@@ -15,7 +15,7 @@ settings = Settings()
 registry = MCPRegistry(settings.mcp_server_configs())
 agent = Agent(settings, registry)
 
-app = FastAPI(title="Agent Core", version="0.2.0")
+app = FastAPI(title="Agent Core", version="0.3.0")
 
 
 @app.middleware("http")
@@ -75,3 +75,29 @@ async def chat(request: ChatRequest) -> ChatResponse:
         logger.exception("agent_run_failed")
         raise HTTPException(status_code=502, detail="agent dependency failed") from exc
     return ChatResponse(content=content, iterations=iterations, tool_calls=tool_calls)
+
+
+@app.post("/api/v1/answer", response_model=AnswerResponse)
+async def answer(request: AnswerRequest) -> AnswerResponse:
+    try:
+        result = await agent.run_grounded_answer(request.question, request.model)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        logger.exception("grounded_answer_failed")
+        raise HTTPException(status_code=502, detail="grounded answer dependency failed") from exc
+    citations = [
+        Citation(
+            id=f"S{index}",
+            chunk_id=item.chunk_id,
+            source_name=item.source_name,
+            text=item.text,
+        )
+        for index, item in enumerate(result.citations, start=1)
+    ]
+    return AnswerResponse(
+        answer=result.content,
+        citations=citations,
+        iterations=result.iterations,
+        tool_calls=result.tool_calls,
+    )
