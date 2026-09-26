@@ -59,6 +59,16 @@ async def test_duplicate_tool_names_are_distinct_across_servers():
     assert {tool.model_name for tool in tools} == {"web__echo", "code__echo"}
 
 
+def test_duplicate_server_names_are_rejected():
+    with pytest.raises(ValueError, match="unique"):
+        MCPRegistry(
+            [
+                MCPServer("test://one", name="same"),
+                MCPServer("test://two", name="same"),
+            ]
+        )
+
+
 @pytest.mark.asyncio
 async def test_call_uses_raw_mcp_tool_name_after_model_namespace_resolution():
     server = FastMCP("web")
