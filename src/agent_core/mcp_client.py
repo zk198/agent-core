@@ -4,6 +4,7 @@ from typing import Any
 
 from fastmcp import Client
 from fastmcp.client.auth import BearerAuth
+from fastmcp.client.transports import StreamableHttpTransport
 
 
 @dataclass(frozen=True)
@@ -46,9 +47,9 @@ class MCPRegistry:
         ]
 
     def _client(self, server: MCPServer) -> Client:
-        if server.auth_token:
-            return Client(server.url, auth=BearerAuth(server.auth_token))
-        return Client(server.url)
+        auth = BearerAuth(server.auth_token) if server.auth_token else None
+        transport = StreamableHttpTransport(server.url, auth=auth)
+        return Client(transport)
 
     async def list_tools(self) -> list[MCPTool]:
         result: list[MCPTool] = []
