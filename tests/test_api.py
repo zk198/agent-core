@@ -109,3 +109,32 @@ def test_grounded_answer_stream_contract(monkeypatch):
     assert '"content": "Hello "' in response.text
     assert "event: done" in response.text
     assert '"id": "S1"' in response.text
+
+
+def test_chat_accepts_message_history(monkeypatch):
+    import agent_core.api as api
+
+    async def fake_run_messages(messages, model=None):
+        assert messages == [
+            {"role": "user", "content": "first"},
+            {"role": "assistant", "content": "previous"},
+            {"role": "user", "content": "second"},
+        ]
+        return "ok", 1, 0
+
+    monkeypatch.setattr(api.agent, "run_messages", fake_run_messages)
+    response = TestClient(app).post(
+        "/api/v1/chat",
+        json={"messages": [
+            {"role": "user", "content": "first"},
+            {"role": "assistant", "content": "previous"},
+            {"role": "user", "content": "second"},
+        ]},
+    )
+    assert response.status_code == 200
+    assert response.json()["content"] == "ok"
+
+
+def test_chat_requires_message_or_messages():
+    response = TestClient(app).post("/api/v1/chat", json={})
+    assert response.status_code == 422
