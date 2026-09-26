@@ -57,3 +57,31 @@ def test_ready_reports_dependency_failure(monkeypatch):
 
     assert response.status_code == 503
     assert response.json()["detail"] == "MCP dependencies unavailable"
+
+
+def test_answer_request_validation():
+    response = TestClient(app).post("/api/v1/answer", json={"question": ""})
+    assert response.status_code == 422
+
+
+def test_grounded_answer_contract(monkeypatch):
+    import agent_core.api as api
+    from agent_core.agent import AgentResult, CitationEvidence
+
+    async def fake_answer(question, model=None):
+        return AgentResult(
+            content="The answer is supported [S1].",
+            iterations=2,
+            tool_calls=1,
+            citations=(CitationEvidence("c1", "mailbox", "Evidence text"),),
+        )
+
+    monkeypatch.setattr(api.agent, "run_grounded_answer", fake_answer)
+    response = TestClient(app).post("/api/v1/answer", json={"question": "What?"})
+    assert response.status_code == 200
+    assert response.json() == {
+        "answer": "The answer is supported [S1].",
+        "citations": [{"id": "S1", "chunk_id": "c1", "source_name": "mailbox", "text": "Evidence text"}],
+        "iterations": 2,
+        "tool_calls": 1,
+    }
