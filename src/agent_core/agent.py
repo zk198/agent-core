@@ -123,7 +123,7 @@ class Agent:
             history=history,
         )
 
-    async def stream_grounded_answer(self, question: str, model: str | None = None):
+    async def stream_grounded_answer(self, question: str, model: str | None = None, history: list[dict[str, str]] | None = None):
         system_prompt = (
             "You are a grounded knowledge assistant. Answer using only evidence returned "
             "by the RAG tools. Cite factual claims with the supplied citation IDs such as [S1]. "
@@ -141,10 +141,10 @@ class Agent:
             }
             for tool in tools
         ]
-        messages: list[Any] = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": question},
-        ]
+        messages: list[Any] = [{"role": "system", "content": system_prompt}]
+        if history:
+            messages.extend(ContextBudget(self.settings.max_tool_result_chars, self.settings.context_reserve_chars).bound_messages(history))
+        messages.append({"role": "user", "content": question})
         evidence: list[CitationEvidence] = []
         tool_calls_total = 0
 
