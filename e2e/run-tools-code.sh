@@ -29,12 +29,22 @@ timeout 180s sh -c "$compose up -d" 2>&1 | tee "$log_dir/up.log"
 for service in mock-llm code-api code-worker agent-core; do
   deadline=$(($(date +%s) + 180))
   while ! $compose exec -T "$service" sh -c 'true' >/dev/null 2>&1; do
-    [ "$(date +%s)" -lt "$deadline" ] || { echo "timeout waiting for $service"; exit 1; }
+    [ "$(date +%s)" -lt "$deadline" ] || { echo "timeout waiting for $service"; dump_state; exit 1; }
     sleep 2
   done
 done
 
-$compose exec -T code-api python -c 'import urllib.request; urllib.request.urlopen("http://127.0.0.1:8000/health", timeout=10).read()' > "$log_dir/code-health.json"
+wait_http() {
+  name="$1"
+  url="$2"
+  deadline=$(($(date +%s) + 180))
+  while ! $compose exec -T code-api python -c "import urllib.request; urllib.request.urlopen('$url', timeout=5).read()" >/dev/null 2>&1; do
+    [ "$(date +%s)" -lt "$deadline" ] || { echo "timeout waiting for $name"; dump_state; exit 1; }
+    sleep 2
+  done
+}
+wait_http "code tool" "http://127.0.0.1:8000/health"
+$compose exec -T agent-core python -c 'import urllib.request; urllib.request.urlopen("http://127.0.0.1:8000/api/v1/health", timeout=10).read()'
 
 $compose exec -T agent-core python -c '
 import httpx
