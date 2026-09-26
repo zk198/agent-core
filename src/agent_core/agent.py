@@ -120,6 +120,118 @@ class Agent:
             collect_citations=True,
         )
 
+    async def stream_grounded_answer(self, question: str, model: str | None = None):
+        system_prompt = (
+            "You are a grounded knowledge assistant. Answer using only evidence returned "
+            "by the RAG tools. Cite factual claims with the supplied citation IDs such as [S1]. "
+            "Do not invent citations or facts. If the evidence is insufficient, say so explicitly."
+        )
+        tools = [tool for tool in await self.registry.list_tools() if tool.server_name == "rag"]
+        openai_tools: list[Any] = [
+            {
+                "type": "function",
+                "function": {
+                    "name": tool.model_name,
+                    "description": tool.description,
+                    "parameters": tool.input_schema,
+                },
+            }
+            for tool in tools
+        ]
+        messages: list[Any] = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": question},
+        ]
+        evidence: list[CitationEvidence] = []
+        tool_calls_total = 0
+
+        for iteration in range(1, self.settings.max_iterations + 1):
+            stream = await self.client.chat.completions.create(
+                model=model or self.settings.model_name,
+                messages=messages,
+                tools=cast(Any, openai_tools or None),
+                stream=True,
+            )
+            content_parts: list[str] = []
+            tool_calls: dict[int, dict[str, Any]] = {}
+            async for chunk in stream:
+                if not chunk.choices:
+                    continue
+                choice = chunk.choices[0]
+                delta = choice.delta
+                if delta.content:
+                    content_parts.append(delta.content)
+                    yield {"type": "delta", "content": delta.content}
+                for tool_call in delta.tool_calls or []:
+                    current = tool_calls.setdefault(
+                        tool_call.index,
+                        {"id": "", "type": "function", "function": {"name": "", "arguments": ""}},
+                    )
+                    if tool_call.id:
+                        current["id"] = tool_call.id
+                    if tool_call.type:
+                        current["type"] = tool_call.type
+                    if tool_call.function:
+                        if tool_call.function.name:
+                            current["function"]["name"] = tool_call.function.name
+                        if tool_call.function.arguments:
+                            current["function"]["arguments"] += tool_call.function.arguments
+
+            if not tool_calls:
+                yield {
+                    "type": "done",
+                    "citations": evidence,
+                    "iterations": iteration,
+                    "tool_calls": tool_calls_total,
+                }
+                return
+
+            assistant_tool_calls = [tool_calls[index] for index in sorted(tool_calls)]
+            messages.append({
+                "role": "assistant",
+                "content": "".join(content_parts) or None,
+                "tool_calls": assistant_tool_calls,
+            })
+
+            for call in assistant_tool_calls:
+                if call["type"] != "function":
+                    continue
+                tool_calls_total += 1
+                if tool_calls_total > self.settings.max_tool_calls:
+                    raise RuntimeError("tool call limit exceeded")
+                function = call["function"]
+                target = next((tool for tool in tools if tool.model_name == function["name"]), None)
+                if target is None:
+                    raise RuntimeError(f"unknown tool: {function['name']}")
+                try:
+                    args = json.loads(function["arguments"] or "{}")
+                except json.JSONDecodeError as exc:
+                    raise RuntimeError(f"invalid arguments for tool {function['name']}") from exc
+                if not isinstance(args, dict):
+                    raise RuntimeError(f"tool arguments for {function['name']} must be an object")
+                result = await self.registry.call(target.server, target.name, args)
+                new_evidence: list[CitationEvidence] = []
+                for item in _extract_rag_evidence(result):
+                    if item not in evidence:
+                        evidence.append(item)
+                        new_evidence.append(item)
+                result_text = _result_text(result)
+                if new_evidence:
+                    start = len(evidence) - len(new_evidence) + 1
+                    result_text = f"RAG evidence sources S{start}..S{len(evidence)}:\n{result_text}"
+                    for index, item in enumerate(new_evidence, start=start):
+                        result_text += f"\n[S{index}] source={item.source_name} chunk={item.chunk_id}: {item.text}"
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": call["id"],
+                    "content": ContextBudget(
+                        self.settings.max_tool_result_chars,
+                        self.settings.context_reserve_chars,
+                    ).bound(result_text),
+                })
+
+        raise RuntimeError("agent iteration limit exceeded")
+
     async def _run(
         self,
         message: str,
