@@ -1,5 +1,7 @@
 from fastmcp import FastMCP
 from fastmcp.client import Client
+from fastmcp.client.auth import BearerAuth
+from fastmcp.client.transports import StreamableHttpTransport
 
 import pytest
 
@@ -77,9 +79,21 @@ async def test_call_uses_raw_mcp_tool_name_after_model_namespace_resolution():
     assert result.content[0].text == "web:hello"
 
 
-@pytest.mark.asyncio
-async def test_auth_client_factory():
+def test_remote_mcp_client_uses_streamable_http_transport_and_bearer_auth():
     server = MCPServer("https://example.test/mcp", "secret", name="rag")
     registry = MCPRegistry([server])
+
     client = registry._client(server)
-    assert client is not None
+
+    assert isinstance(client.transport, StreamableHttpTransport)
+    assert isinstance(client.transport.auth, BearerAuth)
+
+
+def test_remote_mcp_client_uses_streamable_http_without_auth_when_unconfigured():
+    server = MCPServer("https://example.test/mcp", name="rag")
+    registry = MCPRegistry([server])
+
+    client = registry._client(server)
+
+    assert isinstance(client.transport, StreamableHttpTransport)
+    assert client.transport.auth is None
