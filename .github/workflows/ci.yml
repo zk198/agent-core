@@ -150,13 +150,13 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           repository: zk198/agent-tools-web
-          ref: main
+          ref: fix/start-mcp-http-server
           path: agent-tools-web
       - name: Checkout agent-tools-code
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           repository: zk198/agent-tools-code
-          ref: main
+          ref: fix/start-mcp-http-server
           path: agent-tools-code
       - name: Arrange e2e tools rag Compose siblings
         run: |
