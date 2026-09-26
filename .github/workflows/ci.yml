@@ -80,6 +80,11 @@ jobs:
           RAG_JWT_SECRET: e2e-ci-only-secret
         run: sh ./e2e/run-fast.sh discover
 
+      - name: Run gateway session chat
+        env:
+          RAG_JWT_SECRET: e2e-ci-only-secret
+        run: sh ./e2e/run-fast.sh gateway-chat
+
       - name: Run fast agent chat
         env:
           RAG_JWT_SECRET: e2e-ci-only-secret
