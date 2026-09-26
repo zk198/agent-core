@@ -71,10 +71,10 @@ log "compose config"
 $compose config > "$log_dir/compose-config.txt"
 
 log "building focused full RAG path"
-$compose build --progress=plain postgres qdrant pst-agent rag-indexer rag-retrieval ai-gateway agent-core mock-llm 2>&1 | tee "$log_dir/build.log"
+timeout 300s sh -c "$compose build --progress=plain postgres qdrant pst-agent rag-indexer rag-retrieval ai-gateway agent-core mock-llm" 2>&1 | tee "$log_dir/build.log"
 
 log "starting focused full RAG path"
-$compose up -d postgres qdrant pst-agent rag-indexer rag-retrieval mock-llm agent-core ai-gateway
+timeout 180s sh -c "$compose up -d postgres qdrant pst-agent rag-indexer rag-retrieval mock-llm agent-core ai-gateway"
 overall_deadline=$(($(date +%s) + 480))
 
 wait_for_agent() {
