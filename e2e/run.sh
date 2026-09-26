@@ -99,8 +99,8 @@ curl -fsS --max-time 30   -X POST   -H "Authorization: Bearer ${RAG_E2E_TOKEN}" 
 
 log "waiting for indexed marker"
 i=0
-while [ "$i" -lt 120 ]; do
-  log "retrieval poll $i/120"
+while [ "$i" -lt 40 ]; do
+  log "retrieval poll $i/40"
   if curl -fsS --max-time 10       -X POST       -H "Authorization: Bearer ${RAG_E2E_TOKEN}"       -H "Content-Type: application/json"       -d '{"query":"RAG_E2E_MARKER","limit":3}'       http://localhost:18001/search | tee "$log_dir/search-$i.json" | grep -q 'RAG_E2E_MARKER'; then
     break
   fi
@@ -115,7 +115,7 @@ while [ "$i" -lt 120 ]; do
   fi
   sleep 2
 done
-[ "$i" -lt 120 ]
+[ "$i" -lt 40 ]
 
 log "marker indexed; calling agent directly"
 $compose exec -T agent-core python -c 'import httpx; r=httpx.post("http://127.0.0.1:8000/api/v1/chat", json={"message":"Find the RAG E2E marker."}, timeout=60); print(r.text); r.raise_for_status()' | tee "$log_dir/agent-chat.json"
