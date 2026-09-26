@@ -1,0 +1,56 @@
+services:
+  mock-llm:
+    build:
+      context: ${AGENT_CORE_DIR:?set by e2e runner}
+      dockerfile: e2e/mock-llm/Dockerfile
+    expose: ["8080"]
+
+  code-api:
+    build:
+      context: ${AGENT_TOOLS_CODE_DIR:?set by e2e runner}
+    environment:
+      CODE_WORKER_URL: http://code-worker:9000
+    expose: ["8000", "8001"]
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 128
+    mem_limit: 256m
+    cpus: 1.0
+    networks: [code-internal, agent]
+
+  code-worker:
+    build:
+      context: ${AGENT_TOOLS_CODE_DIR:?set by e2e runner}
+    command: ["uvicorn","agent_tools_code.worker:app","--host","0.0.0.0","--port","9000"]
+    expose: ["9000"]
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid,nodev
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 64
+    mem_limit: 512m
+    cpus: 1.0
+    networks: [code-internal]
+
+  agent-core:
+    build:
+      context: ${AGENT_CORE_DIR:?set by e2e runner}
+    environment:
+      AGENT_MODEL_BASE_URL: http://mock-llm:8080/v1
+      AGENT_MODEL_API_KEY: e2e
+      AGENT_MODEL_NAME: e2e/mock
+      AGENT_MCP_SERVERS: http://code-api:8001/mcp
+      AGENT_MCP_SERVER_NAMES: code
+    depends_on:
+      mock-llm:
+        condition: service_started
+      code-api:
+        condition: service_started
+    networks: [agent, code-internal]
+
+networks:
+  agent:
+  code-internal:
+    internal: true
