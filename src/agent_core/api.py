@@ -70,13 +70,13 @@ async def tools() -> list[ToolInfo]:
 @app.post("/api/v1/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest) -> ChatResponse:
     try:
-        content, iterations, tool_calls = await agent.run(request.message, request.model)
+        content, iterations, tool_calls = await agent.run(request.message, request.model, history=[m.model_dump() for m in request.messages])
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
         logger.exception("agent_run_failed")
         raise HTTPException(status_code=502, detail="agent dependency failed") from exc
-    return ChatResponse(content=content, iterations=iterations, tool_calls=tool_calls)
+    return ChatResponse(content=content, conversation_id=request.conversation_id, iterations=iterations, tool_calls=tool_calls)
 
 
 
@@ -84,7 +84,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
 async def answer_stream(request: AnswerRequest) -> StreamingResponse:
     async def events():
         try:
-            async for item in agent.stream_grounded_answer(request.question, request.model):
+            async for item in agent.stream_grounded_answer(request.question, request.model, history=[m.model_dump() for m in request.messages]):
                 if item["type"] == "delta":
                     yield f"event: delta\ndata: {json.dumps({'content': item['content']}, ensure_ascii=False)}\n\n"
                 else:
@@ -120,7 +120,7 @@ async def answer_stream(request: AnswerRequest) -> StreamingResponse:
 @app.post("/api/v1/answer", response_model=AnswerResponse)
 async def answer(request: AnswerRequest) -> AnswerResponse:
     try:
-        result = await agent.run_grounded_answer(request.question, request.model)
+        result = await agent.run_grounded_answer(request.question, request.model, history=[m.model_dump() for m in request.messages])
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
@@ -138,6 +138,7 @@ async def answer(request: AnswerRequest) -> AnswerResponse:
     return AnswerResponse(
         answer=result.content,
         citations=citations,
+        conversation_id=request.conversation_id,
         iterations=result.iterations,
         tool_calls=result.tool_calls,
     )
