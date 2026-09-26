@@ -134,12 +134,12 @@ jobs:
           RAG_JWT_SECRET: e2e-ci-only-secret
         run: sh ./e2e/run.sh
 
-      - name: Upload full E2E logs
+      - name: Upload e2e tools rag logs
         if: ${{ failure() }}
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: agent-core-e2e-tools-rag-logs
-          path: ${{ runner.temp }}/rag-e2e-full
+          path: ${{ runner.temp }}/e2e-tools-rag
           if-no-files-found: ignore
 
   e2e-tools-web:
