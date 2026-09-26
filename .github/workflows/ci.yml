@@ -50,10 +50,20 @@ jobs:
       - name: Build mock retrieval image
         run: docker build --progress=plain -t mock-retrieval:e2e -f e2e/mock-retrieval/Dockerfile .
 
-      - name: Start fast E2E services
+      - name: Start mock services
         env:
           RAG_JWT_SECRET: e2e-ci-only-secret
-        run: ./e2e/run-fast.sh start
+        run: ./e2e/run-fast.sh start-mocks
+
+      - name: Start RAG gateway
+        env:
+          RAG_JWT_SECRET: e2e-ci-only-secret
+        run: ./e2e/run-fast.sh start-gateway
+
+      - name: Start agent-core
+        env:
+          RAG_JWT_SECRET: e2e-ci-only-secret
+        run: ./e2e/run-fast.sh start-agent
 
       - name: Wait for agent-core
         env:
