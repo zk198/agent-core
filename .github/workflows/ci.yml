@@ -25,3 +25,22 @@ jobs:
           exit-code: "1"
           severity: CRITICAL,HIGH
           ignore-unfixed: true
+
+  rag-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      RAG_JWT_SECRET: ci-rag-e2e-secret-32-bytes-minimum!
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Checkout RAG service repositories
+        run: |
+          git clone --depth 1 https://github.com/zk198/rag-infra.git ../rag-infra
+          git clone --depth 1 https://github.com/zk198/rag-ingestion.git ../rag-ingestion
+          git clone --depth 1 https://github.com/zk198/rag-indexer.git ../rag-indexer
+          git clone --depth 1 https://github.com/zk198/rag-retrieval.git ../rag-retrieval
+          git clone --depth 1 https://github.com/zk198/rag-gateway.git ../rag-gateway
+
+      - name: Run agent to RAG end-to-end test
+        run: sh e2e/run.sh
