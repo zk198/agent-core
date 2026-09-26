@@ -29,10 +29,10 @@ jobs:
   fast-e2e:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
 
       - name: Checkout AI gateway
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           repository: zk198/ai-gateway
           ref: phase-1c-ai-gateway-session
@@ -103,7 +103,7 @@ jobs:
 
       - name: Upload fast E2E logs
         if: ${{ failure() }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: agent-core-fast-e2e-logs
           path: ${{ runner.temp }}/rag-e2e-fast
