@@ -1,5 +1,5 @@
-from dataclasses import dataclass
 from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import Any
 
 from fastmcp import Client
@@ -30,12 +30,10 @@ class MCPTool:
 
     @property
     def qualified_name(self) -> str:
-        """Canonical host-side identity: MCP server name + tool name."""
         return f"{self.server_name}.{self.name}"
 
     @property
     def model_name(self) -> str:
-        """Provider-safe model-facing alias for OpenAI-compatible APIs."""
         return f"{self.server_name}__{self.name}"
 
 
@@ -45,6 +43,9 @@ class MCPRegistry:
             server if isinstance(server, MCPServer) else MCPServer(server)
             for server in servers
         ]
+        names = [server.tool_namespace for server in self.servers]
+        if len(names) != len(set(names)):
+            raise ValueError("MCP server names must be unique")
 
     def _client(self, server: MCPServer) -> Client:
         auth = BearerAuth(server.auth_token) if server.auth_token else None
@@ -65,6 +66,9 @@ class MCPRegistry:
                             server_name=server.tool_namespace,
                         )
                     )
+        model_names = [tool.model_name for tool in result]
+        if len(model_names) != len(set(model_names)):
+            raise RuntimeError("MCP tool aliases collide across configured servers")
         return result
 
     async def call(self, server: str, name: str, arguments: dict[str, Any]) -> Any:
