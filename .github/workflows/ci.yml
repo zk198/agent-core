@@ -53,48 +53,48 @@ jobs:
       - name: Start mock LLM
         env:
           RAG_JWT_SECRET: e2e-ci-only-secret
-        run: docker compose -f e2e/fast-compose.yaml up -d mock-llm
+        run: sh ./e2e/run-fast.sh start-mocks
 
       - name: Start mock retrieval
         env:
           RAG_JWT_SECRET: e2e-ci-only-secret
-        run: docker compose -f e2e/fast-compose.yaml up -d mock-retrieval
+        run: sh ./e2e/run-fast.sh start-mocks
 
       - name: Start RAG gateway
         env:
           RAG_JWT_SECRET: e2e-ci-only-secret
-        run: ./e2e/run-fast.sh start-gateway
+        run: sh ./e2e/run-fast.sh start-gateway
 
       - name: Start agent-core
         env:
           RAG_JWT_SECRET: e2e-ci-only-secret
-        run: ./e2e/run-fast.sh start-agent
+        run: sh ./e2e/run-fast.sh start-agent
 
       - name: Wait for agent-core
         env:
           RAG_JWT_SECRET: e2e-ci-only-secret
-        run: ./e2e/run-fast.sh wait-agent
+        run: sh ./e2e/run-fast.sh wait-agent
 
       - name: Wait for RAG gateway
         env:
           RAG_JWT_SECRET: e2e-ci-only-secret
-        run: ./e2e/run-fast.sh wait-gateway
+        run: sh ./e2e/run-fast.sh wait-gateway
 
       - name: Discover MCP tools
         env:
           RAG_JWT_SECRET: e2e-ci-only-secret
-        run: ./e2e/run-fast.sh discover
+        run: sh ./e2e/run-fast.sh discover
 
       - name: Run fast agent chat
         env:
           RAG_JWT_SECRET: e2e-ci-only-secret
-        run: ./e2e/run-fast.sh chat
+        run: sh ./e2e/run-fast.sh chat
 
       - name: Cleanup fast E2E services
         if: ${{ always() }}
         env:
           RAG_JWT_SECRET: e2e-ci-only-secret
-        run: ./e2e/run-fast.sh cleanup
+        run: sh ./e2e/run-fast.sh cleanup
 
       - name: Upload fast E2E logs
         if: ${{ failure() }}
