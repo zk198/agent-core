@@ -114,15 +114,37 @@ jobs:
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
 
-      - name: Checkout e2e tools rag repositories
-        run: |
-          git clone --depth 1 --branch main https://github.com/zk198/rag-infra.git ../rag-infra
-          git clone --depth 1 --branch main https://github.com/zk198/rag-ingestion.git ../rag-ingestion
-          git clone --depth 1 --branch main https://github.com/zk198/rag-indexer.git ../rag-indexer
-          git clone --depth 1 --branch main https://github.com/zk198/rag-retrieval.git ../rag-retrieval
-          git clone --depth 1 --branch phase-1c-ai-gateway-session https://github.com/zk198/ai-gateway.git ../ai-gateway
-          git clone --depth 1 --branch main https://github.com/zk198/agent-tools-web.git ../agent-tools-web
-          git clone --depth 1 --branch main https://github.com/zk198/agent-tools-code.git ../agent-tools-code
+      - name: Checkout rag-infra
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          repository: zk198/rag-infra
+          ref: main
+          path: rag-infra
+      - name: Checkout rag-ingestion
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          repository: zk198/rag-ingestion
+          ref: main
+          path: rag-ingestion
+      - name: Checkout rag-indexer
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          repository: zk198/rag-indexer
+          ref: main
+          path: rag-indexer
+      - name: Checkout rag-retrieval
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          repository: zk198/rag-retrieval
+          ref: main
+          path: rag-retrieval
+      - name: Checkout ai-gateway
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          repository: zk198/ai-gateway
+          ref: main
+          path: ai-gateway
+
 
       - name: Run ai-gateway unit tests
         run: |
