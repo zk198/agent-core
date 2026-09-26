@@ -1,14 +1,28 @@
-from typing import Any
+from dataclasses import dataclass
 
+
+@dataclass(frozen=True)
 class ContextBudget:
-    def __init__(self, max_chars: int = 20_000, reserve_chars: int = 4_000) -> None:
-        self.max_chars = max_chars
-        self.reserve_chars = min(reserve_chars, max_chars)
+    max_chars: int
+    reserve: int
 
-    def bound(self, value: Any) -> str:
-        text = str(value)
-        limit = max(0, self.max_chars - self.reserve_chars)
-        return text if len(text) <= limit else text[:limit] + "\n[truncated]"
+    def bound(self, text: str) -> str:
+        budget = max(0, self.max_chars - self.reserve)
+        if len(text) <= budget:
+            return text
+        return text[:budget] + "\n[tool result truncated]"
 
-def bound_text(value: Any, max_chars: int) -> str:
-    return ContextBudget(max_chars, 0).bound(value)
+    def bound_messages(self, messages: list[dict[str, str]]) -> list[dict[str, str]]:
+        total = 0
+        selected: list[dict[str, str]] = []
+        for message in reversed(messages):
+            size = len(message.get("content", ""))
+            if selected and total + size > self.max_chars:
+                break
+            if not selected and size > self.max_chars:
+                selected.append({"role": message["role"], "content": message["content"][-self.max_chars:]})
+                break
+            selected.append(message)
+            total += size
+        selected.reverse()
+        return selected
