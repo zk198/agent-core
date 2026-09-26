@@ -185,9 +185,10 @@ async def test_grounded_answer_filters_to_rag_and_collects_citations():
         async def create(self, **kwargs):
             self.seen_messages.append(kwargs["messages"])
             if len(self.seen_messages) == 1:
-                message = ToolMessage()
-                message.tool_calls = [RagCall()]
-                return FakeResponse(message)
+                class RagToolMessage(FakeMessage):
+                    tool_calls = [RagCall()]
+                    content = None
+                return FakeResponse(RagToolMessage())
             return FakeResponse(FakeMessage())
 
     agent = Agent(Settings(max_iterations=3), RagRegistry())
