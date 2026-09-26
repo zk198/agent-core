@@ -12,6 +12,25 @@ class ChatResponse(BaseModel):
     tool_calls: int
 
 
+class AnswerRequest(BaseModel):
+    question: str = Field(min_length=1, max_length=20_000)
+    model: str | None = None
+
+
+class Citation(BaseModel):
+    id: str
+    chunk_id: str
+    source_name: str
+    text: str
+
+
+class AnswerResponse(BaseModel):
+    answer: str
+    citations: list[Citation]
+    iterations: int
+    tool_calls: int
+
+
 class ToolInfo(BaseModel):
     name: str
     qualified_name: str

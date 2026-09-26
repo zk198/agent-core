@@ -1,5 +1,6 @@
 import json
 import logging
+from dataclasses import dataclass
 from typing import Any, cast
 
 from openai import AsyncOpenAI
@@ -9,6 +10,75 @@ from .context import ContextBudget
 from .mcp_client import MCPRegistry
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class CitationEvidence:
+    chunk_id: str
+    source_name: str
+    text: str
+
+
+@dataclass(frozen=True)
+class AgentResult:
+    content: str
+    iterations: int
+    tool_calls: int
+    citations: tuple[CitationEvidence, ...] = ()
+
+
+def _structured_value(value: Any) -> Any:
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    if isinstance(value, list):
+        return [_structured_value(item) for item in value]
+    if isinstance(value, dict):
+        return {str(key): _structured_value(item) for key, item in value.items()}
+    model_dump = getattr(value, "model_dump", None)
+    if callable(model_dump):
+        try:
+            return _structured_value(model_dump())
+        except Exception:
+            pass
+    text = getattr(value, "text", None)
+    if isinstance(text, str):
+        return text
+    content = getattr(value, "content", None)
+    if content is not None:
+        return _structured_value(content)
+    return str(value)
+
+
+def _result_text(value: Any) -> str:
+    structured = _structured_value(value)
+    if isinstance(structured, str):
+        return structured
+    return json.dumps(structured, ensure_ascii=False, default=str)
+
+
+def _extract_rag_evidence(value: Any) -> list[CitationEvidence]:
+    structured = _structured_value(value)
+    if isinstance(structured, str):
+        try:
+            structured = json.loads(structured)
+        except json.JSONDecodeError:
+            return []
+    if isinstance(structured, dict):
+        candidates = structured.get("results", structured.get("data", []))
+    else:
+        candidates = structured
+    if not isinstance(candidates, list):
+        return []
+    evidence: list[CitationEvidence] = []
+    for item in candidates:
+        if not isinstance(item, dict):
+            continue
+        chunk_id = item.get("chunk_id")
+        text = item.get("text")
+        source_name = item.get("source_name")
+        if isinstance(chunk_id, str) and isinstance(text, str) and isinstance(source_name, str):
+            evidence.append(CitationEvidence(chunk_id=chunk_id, source_name=source_name, text=text))
+    return evidence
 
 
 class Agent:
@@ -21,8 +91,47 @@ class Agent:
             timeout=settings.model_timeout_seconds,
         )
 
-    async def run(self, message: str, model: str | None = None) -> tuple[str, int, int]:
+    async def run(
+        self,
+        message: str,
+        model: str | None = None,
+        *,
+        system_prompt: str | None = None,
+        allowed_server_names: set[str] | None = None,
+    ) -> tuple[str, int, int]:
+        result = await self._run(
+            message,
+            model,
+            system_prompt=system_prompt,
+            allowed_server_names=allowed_server_names,
+        )
+        return result.content, result.iterations, result.tool_calls
+
+    async def run_grounded_answer(self, question: str, model: str | None = None) -> AgentResult:
+        return await self._run(
+            question,
+            model,
+            system_prompt=(
+                "You are a grounded knowledge assistant. Answer using only evidence returned "
+                "by the RAG tools. Cite factual claims with the supplied citation IDs such as [S1]. "
+                "Do not invent citations or facts. If the evidence is insufficient, say so explicitly."
+            ),
+            allowed_server_names={"rag"},
+            collect_citations=True,
+        )
+
+    async def _run(
+        self,
+        message: str,
+        model: str | None = None,
+        *,
+        system_prompt: str | None = None,
+        allowed_server_names: set[str] | None = None,
+        collect_citations: bool = False,
+    ) -> AgentResult:
         tools = await self.registry.list_tools()
+        if allowed_server_names is not None:
+            tools = [tool for tool in tools if tool.server_name in allowed_server_names]
         model_names = [tool.model_name for tool in tools]
         if len(model_names) != len(set(model_names)):
             raise RuntimeError("duplicate model-facing MCP tool names")
@@ -38,8 +147,12 @@ class Agent:
             }
             for tool in tools
         ]
-        messages: list[Any] = [{"role": "user", "content": message}]
+        messages: list[Any] = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": message})
         tool_calls_total = 0
+        evidence: list[CitationEvidence] = []
 
         for iteration in range(1, self.settings.max_iterations + 1):
             logger.info(
@@ -58,7 +171,12 @@ class Agent:
 
             choice = response.choices[0]
             if not choice.message.tool_calls:
-                return choice.message.content or "", iteration, tool_calls_total
+                return AgentResult(
+                    content=choice.message.content or "",
+                    iterations=iteration,
+                    tool_calls=tool_calls_total,
+                    citations=tuple(evidence),
+                )
 
             messages.append(choice.message.model_dump(exclude_none=True))
             for call in choice.message.tool_calls:
@@ -72,10 +190,7 @@ class Agent:
                 if tool_calls_total > self.settings.max_tool_calls:
                     raise RuntimeError("tool call limit exceeded")
 
-                target = next(
-                    (tool for tool in tools if tool.model_name == function.name),
-                    None,
-                )
+                target = next((tool for tool in tools if tool.model_name == function.name), None)
                 if target is None:
                     raise RuntimeError(f"unknown tool: {function.name}")
 
@@ -93,6 +208,18 @@ class Agent:
                     target.name,
                 )
                 result = await self.registry.call(target.server, target.name, args)
+                new_evidence: list[CitationEvidence] = []
+                if collect_citations and target.server_name == "rag":
+                    for item in _extract_rag_evidence(result):
+                        if item not in evidence:
+                            evidence.append(item)
+                            new_evidence.append(item)
+                result_text = _result_text(result)
+                if new_evidence:
+                    start = len(evidence) - len(new_evidence) + 1
+                    result_text = f"RAG evidence sources S{start}..S{len(evidence)}:\n{result_text}"
+                    for index, item in enumerate(new_evidence, start=start):
+                        result_text += f"\n[S{index}] source={item.source_name} chunk={item.chunk_id}: {item.text}"
                 messages.append(
                     {
                         "role": "tool",
@@ -100,7 +227,7 @@ class Agent:
                         "content": ContextBudget(
                             self.settings.max_tool_result_chars,
                             self.settings.context_reserve_chars,
-                        ).bound(result),
+                        ).bound(result_text),
                     }
                 )
 
