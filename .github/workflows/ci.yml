@@ -26,7 +26,6 @@ jobs:
           severity: CRITICAL,HIGH
           ignore-unfixed: true
 
-
   fast-e2e:
     runs-on: ubuntu-latest
     steps:
@@ -38,7 +37,6 @@ jobs:
           repository: zk198/rag-gateway
           ref: main
           path: rag-gateway
-          token: ${{ secrets.AGENT_E2E_RAG_GATEWAY_TOKEN }}
 
       - name: Run fast agent E2E
         env:
