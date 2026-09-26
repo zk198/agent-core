@@ -140,3 +140,75 @@ async def test_agent_iteration_limit():
     agent.client = Endless()
     with pytest.raises(RuntimeError, match="iteration"):
         await agent.run("hello")
+
+
+class RagRegistry(FakeRegistry):
+    async def list_tools(self):
+        attrs = {
+            "name": "search_knowledge",
+            "description": "search RAG",
+            "input_schema": {"type": "object"},
+            "server": "rag",
+            "server_name": "rag",
+            "model_name": "rag__search_knowledge",
+        }
+        tool = type("Tool", (), attrs)
+        return [tool()]
+
+    async def call(self, server, name, arguments):
+        assert (server, name) == ("rag", "search_knowledge")
+        return [{
+            "chunk_id": "c1",
+            "source_name": "mailbox",
+            "text": "The project marker is RAG_E2E_MARKER.",
+        }]
+
+
+class RagFunction:
+    name = "rag__search_knowledge"
+    arguments = json.dumps({"query": "marker"})
+
+
+class RagCall:
+    id = "rag-call"
+    type = "function"
+    function = RagFunction()
+
+
+@pytest.mark.asyncio
+async def test_grounded_answer_filters_to_rag_and_collects_citations():
+    class GroundedClient(FakeClient):
+        def __init__(self):
+            super().__init__()
+            self.seen_messages = []
+
+        async def create(self, **kwargs):
+            self.seen_messages.append(kwargs["messages"])
+            if len(self.seen_messages) == 1:
+                message = ToolMessage()
+                message.tool_calls = [RagCall()]
+                return FakeResponse(message)
+            return FakeResponse(FakeMessage())
+
+    agent = Agent(Settings(max_iterations=3), RagRegistry())
+    agent.client = GroundedClient()
+    result = await agent.run_grounded_answer("What is the marker?")
+    assert result.content == "done"
+    assert result.tool_calls == 1
+    assert result.citations[0].chunk_id == "c1"
+    assert result.citations[0].source_name == "mailbox"
+    assert result.citations[0].text == "The project marker is RAG_E2E_MARKER."
+
+
+@pytest.mark.asyncio
+async def test_grounded_answer_injects_citation_instructions():
+    class GroundedClient(FakeClient):
+        async def create(self, **kwargs):
+            assert kwargs["messages"][0]["role"] == "system"
+            assert "only evidence returned by the RAG tools" in kwargs["messages"][0]["content"]
+            return FakeResponse(FakeMessage())
+
+    agent = Agent(Settings(max_iterations=1), RagRegistry())
+    agent.client = GroundedClient()
+    result = await agent.run_grounded_answer("Question")
+    assert result.content == "done"
