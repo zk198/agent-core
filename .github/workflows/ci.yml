@@ -55,6 +55,16 @@ jobs:
           RAG_JWT_SECRET: e2e-ci-only-secret
         run: ./e2e/run-fast.sh start
 
+      - name: Wait for agent-core
+        env:
+          RAG_JWT_SECRET: e2e-ci-only-secret
+        run: ./e2e/run-fast.sh wait-agent
+
+      - name: Wait for RAG gateway
+        env:
+          RAG_JWT_SECRET: e2e-ci-only-secret
+        run: ./e2e/run-fast.sh wait-gateway
+
       - name: Discover MCP tools
         env:
           RAG_JWT_SECRET: e2e-ci-only-secret
