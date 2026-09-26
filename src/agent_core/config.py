@@ -14,8 +14,8 @@ class Settings(BaseSettings):
     max_tool_result_chars: int = Field(default=20_000, ge=1, le=200_000)
     context_reserve_chars: int = Field(default=4_000, ge=0, le=100_000)
     mcp_servers: str = (
-        "http://agent-tools-web:8001/mcp,"
-        "http://agent-tools-code:8001/mcp,"
+        "http://agent-tools-web:8000/mcp,"
+        "http://agent-tools-code:8000/mcp,"
         "http://rag-gateway:8200/mcp"
     )
     mcp_auth_tokens: str = ""
@@ -24,11 +24,11 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="AGENT_")
 
     def mcp_server_configs(self) -> list[MCPServer]:
-        urls = [value.strip() for value in self.mcp_servers.split(",") if value.strip()]
-        names = [value.strip() for value in self.mcp_server_names.split(",") if value.strip()]
+        urls = [value.strip() for value in self.mcp_servers.split(",")]
+        names = [value.strip() for value in self.mcp_server_names.split(",")]
         if len(names) != len(urls):
             raise ValueError("AGENT_MCP_SERVER_NAMES must match AGENT_MCP_SERVERS")
-        if not all(names) or len(set(names)) != len(names):
+        if not all(urls) or not all(names) or len(set(names)) != len(names):
             raise ValueError("AGENT_MCP_SERVER_NAMES must be unique and non-empty")
 
         raw_tokens = self.mcp_auth_tokens.strip()
