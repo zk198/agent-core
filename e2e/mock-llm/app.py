@@ -58,7 +58,7 @@ class Handler(BaseHTTPRequestHandler):
                     "object": "chat.completion.chunk",
                     "choices": [{
                         "index": 0,
-                        "delta": {"role": "assistant", "content": "RAG_E2E_STREAM_OK: retrieved the indexed marker through MCP."},
+                        "delta": {\n                            "role": "assistant",\n                            "content": "RAG_E2E_STREAM_OK: retrieved the indexed marker through MCP.",\n                        },
                         "finish_reason": "stop",
                     }],
                 })
