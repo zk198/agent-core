@@ -28,7 +28,7 @@ export AI_GATEWAY_PORT="18001"
 script_dir=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 export AGENT_CORE_DIR="$(CDPATH= cd -- "$script_dir/.." && pwd)"
 compose="docker compose -f $script_dir/../../rag-infra/compose.yaml -f $script_dir/compose.yaml"
-log_dir="${RUNNER_TEMP:-/tmp}/rag-e2e-full"
+log_dir="${RUNNER_TEMP:-/tmp}/e2e-tools-rag"
 mkdir -p "$log_dir"
 
 log() { echo "[$(date -u +%FT%TZ)] $*"; }
@@ -70,10 +70,10 @@ trap cleanup EXIT
 log "compose config"
 $compose config > "$log_dir/compose-config.txt"
 
-log "building focused full RAG path"
+log "building e2e tools rag path"
 timeout 300s sh -c "$compose build --progress=plain postgres qdrant pst-agent rag-indexer rag-retrieval ai-gateway agent-core mock-llm" 2>&1 | tee "$log_dir/build.log"
 
-log "starting focused full RAG path"
+log "starting e2e tools rag path"
 timeout 180s sh -c "$compose up -d postgres qdrant pst-agent rag-indexer rag-retrieval mock-llm agent-core ai-gateway"
 overall_deadline=$(($(date +%s) + 480))
 
@@ -91,7 +91,7 @@ wait_for_agent() {
   log "agent-core ready"
 }
 wait_for_agent
-wait_for "ai-gateway" "http://localhost:18001/healthz"
+wait_for "ai-gateway" "http://localhost:18001/health"
 
 log "uploading marker"
 printf 'RAG_E2E_MARKER: integration path from agent-core through MCP into indexed RAG content.\n' > /tmp/rag-e2e.txt
