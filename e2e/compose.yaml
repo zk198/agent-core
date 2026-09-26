@@ -1,0 +1,29 @@
+include:
+  - ../rag-infra/compose.yaml
+
+services:
+  rag-gateway:
+    ports:
+      - "18001:8200"
+
+  agent-core:
+    build: .
+    ports:
+      - "18000:8000"
+    environment:
+      AGENT_MODEL_BASE_URL: http://mock-llm:8080/v1
+      AGENT_MODEL_API_KEY: e2e
+      AGENT_MODEL_NAME: e2e/mock
+      AGENT_MCP_SERVERS: http://rag-gateway:8200/mcp
+      AGENT_MCP_AUTH_TOKENS: ${RAG_E2E_TOKEN:?set RAG_E2E_TOKEN}
+      AGENT_MCP_SERVER_NAMES: rag
+    depends_on:
+      rag-gateway:
+        condition: service_started
+      mock-llm:
+        condition: service_started
+
+  mock-llm:
+    build:
+      context: .
+      dockerfile: e2e/mock-llm/Dockerfile
