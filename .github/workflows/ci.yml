@@ -42,19 +42,13 @@ jobs:
         run: docker build --progress=plain -t rag-gateway:e2e ./rag-gateway
 
       - name: Build agent-core image
-        env:
-          RAG_JWT_SECRET: e2e-ci-only-secret
-        run: ./e2e/run-fast.sh build agent-core
+        run: docker build --progress=plain -t agent-core:e2e .
 
       - name: Build mock LLM image
-        env:
-          RAG_JWT_SECRET: e2e-ci-only-secret
-        run: ./e2e/run-fast.sh build mock-llm
+        run: docker build --progress=plain -t mock-llm:e2e -f e2e/mock-llm/Dockerfile .
 
       - name: Build mock retrieval image
-        env:
-          RAG_JWT_SECRET: e2e-ci-only-secret
-        run: ./e2e/run-fast.sh build mock-retrieval
+        run: docker build --progress=plain -t mock-retrieval:e2e -f e2e/mock-retrieval/Dockerfile .
 
       - name: Start fast E2E services
         env:
