@@ -14,8 +14,8 @@ class Settings(BaseSettings):
     max_tool_result_chars: int = Field(default=20_000, ge=1, le=200_000)
     context_reserve_chars: int = Field(default=4_000, ge=0, le=100_000)
     mcp_servers: str = (
-        "http://agent-tools-web:8000/mcp,"
-        "http://agent-tools-code:8000/mcp,"
+        "http://agent-tools-web:8001/mcp,"
+        "http://agent-tools-code:8001/mcp,"
         "http://rag-gateway:8200/mcp"
     )
     mcp_auth_tokens: str = ""
