@@ -23,6 +23,7 @@ export AGENT_MODEL_NAME="e2e/mock"
 export AGENT_MCP_SERVER_NAMES="rag"
 export AGENT_MCP_SERVERS="http://ai-gateway:8200/mcp/"
 export AGENT_MCP_AUTH_TOKENS="$RAG_E2E_TOKEN"
+export AI_GATEWAY_PORT="18001"
 
 compose="docker compose -f ../rag-infra/compose.yaml -f e2e/compose.yaml"
 log_dir="${RUNNER_TEMP:-/tmp}/rag-e2e-full"
