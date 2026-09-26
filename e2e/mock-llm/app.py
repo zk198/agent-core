@@ -65,7 +65,7 @@ class Handler(BaseHTTPRequestHandler):
                         "finish_reason": "stop",
                     }],
                 })
-            data = "".join(f"data: {json.dumps(payload)}\\n\\n" for payload in payloads) + "data: [DONE]\\n\\n"
+            data = "".join(f"data: {json.dumps(payload)}\n\n" for payload in payloads) + "data: [DONE]\n\n"
             raw = data.encode()
             self.send_response(200)
             self.send_header("Content-Type", "text/event-stream")
