@@ -19,6 +19,7 @@ def choose_tool(request: dict) -> tuple[str, dict, str]:
 
 class Handler(BaseHTTPRequestHandler):
     def send_json(self, payload: dict, status: int = 200, content_type: str = "application/json") -> None:
+
         data = json.dumps(payload).encode()
         self.send_response(status)
         self.send_header("Content-Type", content_type)
@@ -61,7 +62,12 @@ class Handler(BaseHTTPRequestHandler):
                     "choices": [{"index": 0, "delta": {"role": "assistant", "content": marker}, "finish_reason": "stop"}],
                 }
             raw = (f"data: {json.dumps(payload)}\n\ndata: [DONE]\n\n").encode()
-            self.send_json({}, content_type="text/event-stream")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Content-Length", str(len(raw)))
+            self.end_headers()
+            self.wfile.write(raw)
             return
 
         if not has_tool_result:
