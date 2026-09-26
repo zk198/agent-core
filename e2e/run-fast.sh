@@ -70,8 +70,10 @@ build() {
 }
 
 start_mocks() {
-  log "starting mock services"
-  $compose up -d mock-llm mock-retrieval
+  log "starting mock LLM"
+  $compose up -d mock-llm
+  log "starting mock retrieval"
+  $compose up -d mock-retrieval
 }
 start_gateway() {
   log "starting RAG gateway"
