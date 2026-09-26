@@ -114,54 +114,15 @@ jobs:
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
 
-      - name: Checkout RAG infrastructure
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
-        with:
-          repository: zk198/rag-infra
-          ref: phase-1c-ai-gateway-integration
-          path: ../rag-infra
-
-      - name: Checkout RAG ingestion
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30af803
-        with:
-          repository: zk198/rag-ingestion
-          ref: main
-          path: ../rag-ingestion
-
-      - name: Checkout RAG indexer
-        uses: actions/checkout@d23441a48e516b6c34aea1a2e8ad9016488ae2f0f9933ca
-        with:
-          repository: zk198/rag-indexer
-          ref: main
-          path: ../rag-indexer
-
-      - name: Checkout RAG retrieval
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
-        with:
-          repository: zk198/rag-retrieval
-          ref: main
-          path: ../rag-retrieval
-
-      - name: Checkout AI gateway
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
-        with:
-          repository: zk198/ai-gateway
-          ref: phase-1c-ai-gateway-session
-          path: ../ai-gateway
-
-      - name: Checkout web tools
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
-        with:
-          repository: zk198/agent-tools-web
-          ref: main
-          path: ../agent-tools-web
-
-      - name: Checkout code tools
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
-        with:
-          repository: zk198/agent-tools-code
-          ref: main
-          path: ../agent-tools-code
+      - name: Checkout focused full-stack repositories
+        run: |
+          git clone --depth 1 --branch phase-1c-ai-gateway-integration https://github.com/zk198/rag-infra.git ../rag-infra
+          git clone --depth 1 --branch main https://github.com/zk198/rag-ingestion.git ../rag-ingestion
+          git clone --depth 1 --branch main https://github.com/zk198/rag-indexer.git ../rag-indexer
+          git clone --depth 1 --branch main https://github.com/zk198/rag-retrieval.git ../rag-retrieval
+          git clone --depth 1 --branch phase-1c-ai-gateway-session https://github.com/zk198/ai-gateway.git ../ai-gateway
+          git clone --depth 1 --branch main https://github.com/zk198/agent-tools-web.git ../agent-tools-web
+          git clone --depth 1 --branch main https://github.com/zk198/agent-tools-code.git ../agent-tools-code
 
       - name: Run focused full RAG E2E
         env:
