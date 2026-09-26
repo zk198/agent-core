@@ -82,3 +82,5 @@ assert "CODE_E2E_OK" in r.text
 ' | tee "$log_dir/agent-chat.json"
 
 echo "e2e tools code passed"
+
+# MCP launcher validation follows the tool container branch.
