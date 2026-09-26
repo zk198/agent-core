@@ -44,6 +44,17 @@ wait_http() {
   done
 }
 wait_http "code tool" "http://127.0.0.1:8000/health"
+wait_mcp() {
+  name="$1"
+  url="$2"
+  expected="$3"
+  deadline=$(($(date +%s) + 180))
+  while ! $compose exec -T agent-core python -c "import asyncio; from fastmcp import Client; async def main():\n  async with Client('$url') as client:\n    names=[tool.name for tool in await client.list_tools()]\n    assert '$expected' in names, names\nasyncio.run(main())" >/dev/null 2>&1; do
+    [ "$(date +%s)" -lt "$deadline" ] || { echo "timeout waiting for $name MCP"; dump_state; exit 1; }
+    sleep 2
+  done
+}
+wait_mcp "code MCP" "http://code-api:8001/mcp/" "run_python"
 $compose exec -T agent-core python -c 'import urllib.request; urllib.request.urlopen("http://127.0.0.1:8000/api/v1/health", timeout=10).read()'
 
 $compose exec -T agent-core python -c '
