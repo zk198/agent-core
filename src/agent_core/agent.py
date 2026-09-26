@@ -98,16 +98,18 @@ class Agent:
         *,
         system_prompt: str | None = None,
         allowed_server_names: set[str] | None = None,
+        history: list[dict[str, str]] | None = None,
     ) -> tuple[str, int, int]:
         result = await self._run(
             message,
             model,
             system_prompt=system_prompt,
             allowed_server_names=allowed_server_names,
+            history=history,
         )
         return result.content, result.iterations, result.tool_calls
 
-    async def run_grounded_answer(self, question: str, model: str | None = None) -> AgentResult:
+    async def run_grounded_answer(self, question: str, model: str | None = None, history: list[dict[str, str]] | None = None) -> AgentResult:
         return await self._run(
             question,
             model,
@@ -118,6 +120,7 @@ class Agent:
             ),
             allowed_server_names={"rag"},
             collect_citations=True,
+            history=history,
         )
 
     async def stream_grounded_answer(self, question: str, model: str | None = None):
@@ -240,6 +243,7 @@ class Agent:
         system_prompt: str | None = None,
         allowed_server_names: set[str] | None = None,
         collect_citations: bool = False,
+        history: list[dict[str, str]] | None = None,
     ) -> AgentResult:
         tools = await self.registry.list_tools()
         if allowed_server_names is not None:
@@ -262,6 +266,8 @@ class Agent:
         messages: list[Any] = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
+        if history:
+            messages.extend(ContextBudget(self.settings.max_tool_result_chars, self.settings.context_reserve_chars).bound_messages(history))
         messages.append({"role": "user", "content": message})
         tool_calls_total = 0
         evidence: list[CitationEvidence] = []
