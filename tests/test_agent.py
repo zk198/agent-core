@@ -181,6 +181,7 @@ async def test_grounded_answer_filters_to_rag_and_collects_citations():
         def __init__(self):
             super().__init__()
             self.seen_messages = []
+            self.chat.completions = self
 
         async def create(self, **kwargs):
             self.seen_messages.append(kwargs["messages"])
@@ -204,6 +205,10 @@ async def test_grounded_answer_filters_to_rag_and_collects_citations():
 @pytest.mark.asyncio
 async def test_grounded_answer_injects_citation_instructions():
     class GroundedClient(FakeClient):
+        def __init__(self):
+            super().__init__()
+            self.chat.completions = self
+
         async def create(self, **kwargs):
             assert kwargs["messages"][0]["role"] == "system"
             assert "only evidence returned by the RAG tools" in kwargs["messages"][0]["content"]
