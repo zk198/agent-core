@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     mcp_servers: str = (
         "http://agent-tools-web:8001/mcp,"
         "http://agent-tools-code:8001/mcp,"
-        "http://rag-gateway:8200/mcp"
+        "http://rag-gateway:8200/mcp/"
     )
     mcp_auth_tokens: str = ""
     mcp_server_names: str = "web,code,rag"
