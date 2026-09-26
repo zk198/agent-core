@@ -1,0 +1,56 @@
+services:
+  mock-llm:
+    build:
+      context: ${AGENT_CORE_DIR:?set by e2e runner}
+      dockerfile: e2e/mock-llm/Dockerfile
+    expose: ["8080"]
+
+  mock-search:
+    build:
+      context: ${AGENT_CORE_DIR:?set by e2e runner}
+      dockerfile: e2e/mock-search/Dockerfile
+    expose: ["8080"]
+    networks: [search]
+
+  searxng:
+    image: searxng/searxng:2026.9.18-0d6910ae5
+    expose: ["8080"]
+    volumes:
+      - ${AGENT_CORE_DIR:?set by e2e runner}/e2e/searxng/settings.yml:/etc/searxng/settings.yml:ro
+    depends_on:
+      mock-search:
+        condition: service_started
+    networks: [web, search]
+
+  web:
+    build:
+      context: ${AGENT_TOOLS_WEB_DIR:?set by e2e runner}
+    environment:
+      PYTHONUNBUFFERED: "1"
+      WEB_SEARCH_URL: http://searxng:8080/search
+    expose: ["8000", "8001"]
+    depends_on:
+      searxng:
+        condition: service_started
+    networks: [web]
+
+  agent-core:
+    build:
+      context: ${AGENT_CORE_DIR:?set by e2e runner}
+    environment:
+      AGENT_MODEL_BASE_URL: http://mock-llm:8080/v1
+      AGENT_MODEL_API_KEY: e2e
+      AGENT_MODEL_NAME: e2e/mock
+      AGENT_MCP_SERVERS: http://web:8001/mcp
+      AGENT_MCP_SERVER_NAMES: web
+    depends_on:
+      mock-llm:
+        condition: service_started
+      web:
+        condition: service_started
+    networks: [web, agent]
+
+networks:
+  web:
+  search:
+  agent:
