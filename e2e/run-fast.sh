@@ -102,6 +102,18 @@ chat() {
   log "fast E2E passed"
 }
 
+stream() {
+  log "calling grounded answer stream"
+  curl -fsS --max-time 60 \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"question":"Find the RAG E2E marker."}' \
+    http://localhost:18000/api/v1/answer/stream | tee "$log_dir/answer-stream.txt"
+  grep -q 'RAG_E2E_STREAM_OK' "$log_dir/answer-stream.txt"
+  grep -q 'event: done' "$log_dir/answer-stream.txt"
+  log "grounded answer stream passed"
+}
+
 cleanup() {
   log "final compose state"
   dump_state
@@ -118,6 +130,7 @@ case "${1:-all}" in
   wait-gateway) wait_gateway ;;
   discover) discover ;;
   chat) chat ;;
+  stream) stream ;;
   cleanup) cleanup ;;
   all)
     trap cleanup EXIT
@@ -127,7 +140,7 @@ case "${1:-all}" in
     chat
     ;;
   *)
-    echo "usage: $0 [build|start-mocks|start-gateway|start-agent|start|wait-agent|wait-gateway|discover|chat|cleanup|all]" >&2
+    echo "usage: $0 [build|start-mocks|start-gateway|start-agent|start|wait-agent|wait-gateway|discover|chat|stream|cleanup|all]" >&2
     exit 2
     ;;
 esac

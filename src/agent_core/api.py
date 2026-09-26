@@ -1,7 +1,9 @@
+import json
 import logging
 import time
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import StreamingResponse
 
 from .agent import Agent
 from .config import Settings
@@ -75,6 +77,44 @@ async def chat(request: ChatRequest) -> ChatResponse:
         logger.exception("agent_run_failed")
         raise HTTPException(status_code=502, detail="agent dependency failed") from exc
     return ChatResponse(content=content, iterations=iterations, tool_calls=tool_calls)
+
+
+
+@app.post("/api/v1/answer/stream")
+async def answer_stream(request: AnswerRequest) -> StreamingResponse:
+    async def events():
+        try:
+            async for item in agent.stream_grounded_answer(request.question, request.model):
+                if item["type"] == "delta":
+                    yield f"event: delta\ndata: {json.dumps({'content': item['content']}, ensure_ascii=False)}\n\n"
+                else:
+                    citations = [
+                        {
+                            "id": f"S{index}",
+                            "chunk_id": citation.chunk_id,
+                            "source_name": citation.source_name,
+                            "text": citation.text,
+                        }
+                        for index, citation in enumerate(item["citations"], start=1)
+                    ]
+                    payload = json.dumps(
+                        {
+                            "citations": citations,
+                            "iterations": item["iterations"],
+                            "tool_calls": item["tool_calls"],
+                        },
+                        ensure_ascii=False,
+                    )
+                    yield f"event: done\ndata: {payload}\n\n"
+        except Exception:
+            logger.exception("grounded_answer_stream_failed")
+            yield f"event: error\ndata: {json.dumps({'detail': 'grounded answer dependency failed'})}\n\n"
+
+    return StreamingResponse(
+        events(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @app.post("/api/v1/answer", response_model=AnswerResponse)

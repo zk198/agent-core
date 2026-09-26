@@ -85,3 +85,27 @@ def test_grounded_answer_contract(monkeypatch):
         "iterations": 2,
         "tool_calls": 1,
     }
+
+
+def test_grounded_answer_stream_contract(monkeypatch):
+    import agent_core.api as api
+    from agent_core.agent import CitationEvidence
+
+    async def fake_stream(question, model=None):
+        yield {"type": "delta", "content": "Hello "}
+        yield {"type": "delta", "content": "world."}
+        yield {
+            "type": "done",
+            "citations": [CitationEvidence("c1", "mailbox", "Evidence")],
+            "iterations": 2,
+            "tool_calls": 1,
+        }
+
+    monkeypatch.setattr(api.agent, "stream_grounded_answer", fake_stream)
+    response = TestClient(app).post("/api/v1/answer/stream", json={"question": "What?"})
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/event-stream")
+    assert "event: delta" in response.text
+    assert '"content": "Hello "' in response.text
+    assert "event: done" in response.text
+    assert '"id": "S1"' in response.text
