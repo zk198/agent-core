@@ -38,10 +38,25 @@ jobs:
           ref: f1d3b42c1a0f58a73f546aee1240e6cb85226ac8
           path: rag-gateway
 
-      - name: Build fast E2E images
+      - name: Build RAG gateway image
         env:
           RAG_JWT_SECRET: e2e-ci-only-secret
-        run: ./e2e/run-fast.sh build
+        run: ./e2e/run-fast.sh build rag-gateway
+
+      - name: Build agent-core image
+        env:
+          RAG_JWT_SECRET: e2e-ci-only-secret
+        run: ./e2e/run-fast.sh build agent-core
+
+      - name: Build mock LLM image
+        env:
+          RAG_JWT_SECRET: e2e-ci-only-secret
+        run: ./e2e/run-fast.sh build mock-llm
+
+      - name: Build mock retrieval image
+        env:
+          RAG_JWT_SECRET: e2e-ci-only-secret
+        run: ./e2e/run-fast.sh build mock-retrieval
 
       - name: Start fast E2E services
         env:
