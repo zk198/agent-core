@@ -146,10 +146,20 @@ jobs:
           path: ai-gateway
 
 
-      - name: Run ai-gateway unit tests
-        run: |
-          python -m pip install --quiet -e "../ai-gateway[test]"
-          python -m pytest "../ai-gateway/tests"
+      - name: Install ai-gateway test dependencies
+        run: python -m pip install --quiet -e "../ai-gateway[test]"
+      - name: ai-gateway test health
+        run: python -m pytest "../ai-gateway/tests/test_api.py::test_health"
+      - name: ai-gateway test search auth
+        run: python -m pytest "../ai-gateway/tests/test_api.py::test_search_authenticates_and_injects_derived_context"
+      - name: ai-gateway test upload
+        run: python -m pytest "../ai-gateway/tests/test_api.py::test_upload_uses_ingestion_backend"
+      - name: ai-gateway test auth routes
+        run: python -m pytest "../ai-gateway/tests/test_api.py::test_user_read_routes_require_auth"
+      - name: ai-gateway test MCP projection
+        run: python -m pytest "../ai-gateway/tests/test_api.py::test_mcp_only_exposes_llm_routes"
+      - name: ai-gateway test conversation session
+        run: python -m pytest "../ai-gateway/tests/test_api.py::test_chat_completions_persists_history_and_calls_agent"
 
       - name: Run e2e tools rag
         env:
