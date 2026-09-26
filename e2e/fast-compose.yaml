@@ -1,6 +1,6 @@
 services:
   rag-gateway:
-    build: ../rag-gateway
+    image: rag-gateway:e2e
     environment:
       RAG_RETRIEVAL_URL: http://mock-retrieval:8100
       RAG_INGESTION_URL: http://mock-retrieval:8100
