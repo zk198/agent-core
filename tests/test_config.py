@@ -38,6 +38,16 @@ def test_mcp_server_names_must_align():
         settings.mcp_server_configs()
 
 
+def test_mcp_server_names_must_be_unique_and_non_empty():
+    duplicate = Settings(mcp_servers="a,b", mcp_server_names="web,web")
+    with pytest.raises(ValueError, match="unique"):
+        duplicate.mcp_server_configs()
+
+    empty = Settings(mcp_servers="a,b", mcp_server_names="web,")
+    with pytest.raises(ValueError, match="unique"):
+        empty.mcp_server_configs()
+
+
 def test_mcp_auth_tokens_must_align():
     settings = Settings(
         mcp_servers="a,b",
