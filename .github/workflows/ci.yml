@@ -25,3 +25,30 @@ jobs:
           exit-code: "1"
           severity: CRITICAL,HIGH
           ignore-unfixed: true
+
+
+  fast-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Checkout RAG gateway
+        uses: actions/checkout@v6
+        with:
+          repository: zk198/rag-gateway
+          ref: main
+          path: rag-gateway
+          token: ${{ secrets.AGENT_E2E_RAG_GATEWAY_TOKEN }}
+
+      - name: Run fast agent E2E
+        env:
+          RAG_JWT_SECRET: e2e-ci-only-secret
+        run: ./e2e/run-fast.sh
+
+      - name: Upload fast E2E logs
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: agent-core-fast-e2e-logs
+          path: ${{ runner.temp }}/rag-e2e-fast
+          if-no-files-found: ignore
