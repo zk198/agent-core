@@ -110,7 +110,12 @@ cleanup() {
 
 case "${1:-all}" in
   build) build ;;
-  start-mocks) start_mocks ;;\n  start-gateway) start_gateway ;;\n  start-agent) start_agent ;;\n  start) start_mocks; start_gateway; start_agent ;;\n  wait-agent) wait_agent ;;\n  wait-gateway) wait_gateway ;;
+  start-mocks) start_mocks ;;
+  start-gateway) start_gateway ;;
+  start-agent) start_agent ;;
+  start) start_mocks; start_gateway; start_agent ;;
+  wait-agent) wait_agent ;;
+  wait-gateway) wait_gateway ;;
   discover) discover ;;
   chat) chat ;;
   cleanup) cleanup ;;
