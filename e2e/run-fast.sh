@@ -3,17 +3,28 @@ set -eu
 
 : "${RAG_JWT_SECRET:?RAG_JWT_SECRET is required}"
 
-python -m pip install --quiet "PyJWT>=2.9,<3"
-
 export RAG_E2E_TOKEN="$(python - <<'PY'
+import base64
+import hashlib
+import hmac
+import json
 import os
-import jwt
 
-print(jwt.encode(
+def b64(value: bytes) -> str:
+    return base64.urlsafe_b64encode(value).rstrip(b"=").decode()
+
+header = b64(json.dumps({"alg": "HS256", "typ": "JWT"}, separators=(",", ":")).encode())
+payload = b64(json.dumps(
     {"tenant_id": "e2e-tenant", "sub": "e2e-user"},
-    os.environ["RAG_JWT_SECRET"],
-    algorithm="HS256",
-))
+    separators=(",", ":"),
+).encode())
+signing_input = f"{header}.{payload}".encode()
+signature = hmac.new(
+    os.environ["RAG_JWT_SECRET"].encode(),
+    signing_input,
+    hashlib.sha256,
+).digest()
+print(f"{header}.{payload}.{b64(signature)}")
 PY
 )"
 
