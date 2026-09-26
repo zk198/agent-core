@@ -64,31 +64,55 @@ wait_for() {
 log "compose config"
 $compose config > "$log_dir/compose-config.txt"
 
-log "building fast E2E services"
-$compose build --progress=plain 2>&1 | tee "$log_dir/build.log"
+build() {
+  log "building fast E2E services"
+  $compose build --progress=plain 2>&1 | tee "$log_dir/build.log"
+}
+
+start() {
+  log "starting fast E2E services"
+  $compose up -d
+  wait_for "agent-core" "http://localhost:18000/api/v1/health"
+  wait_for "rag-gateway" "http://localhost:18001/healthz"
+}
+
+discover() {
+  log "discovering MCP tools through agent-core"
+  curl -fsS --max-time 30 http://localhost:18000/api/v1/tools | tee "$log_dir/tools.json"
+}
+
+chat() {
+  log "calling agent"
+  curl -fsS --max-time 60 \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"message":"Find the RAG E2E marker."}' \
+    http://localhost:18000/api/v1/chat | tee "$log_dir/chat.json"
+  grep -q 'RAG_E2E_OK' "$log_dir/chat.json"
+  log "fast E2E passed"
+}
 
 cleanup() {
   log "final compose state"
   dump_state
   $compose down -v || true
 }
-trap cleanup EXIT
 
-log "starting fast E2E services"
-$compose up -d
-
-wait_for "agent-core" "http://localhost:18000/api/v1/health"
-wait_for "rag-gateway" "http://localhost:18001/healthz"
-
-log "discovering MCP tools through agent-core"
-curl -fsS --max-time 30 http://localhost:18000/api/v1/tools | tee "$log_dir/tools.json"
-
-log "calling agent"
-curl -fsS --max-time 60 \
-  -X POST \
-  -H "Content-Type: application/json" \
-  -d '{"message":"Find the RAG E2E marker."}' \
-  http://localhost:18000/api/v1/chat | tee "$log_dir/chat.json"
-
-grep -q 'RAG_E2E_OK' "$log_dir/chat.json"
-log "fast E2E passed"
+case "${1:-all}" in
+  build) build ;;
+  start) start ;;
+  discover) discover ;;
+  chat) chat ;;
+  cleanup) cleanup ;;
+  all)
+    trap cleanup EXIT
+    build
+    start
+    discover
+    chat
+    ;;
+  *)
+    echo "usage: $0 [build|start|discover|chat|cleanup|all]" >&2
+    exit 2
+    ;;
+esac
