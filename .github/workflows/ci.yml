@@ -85,6 +85,11 @@ jobs:
           RAG_JWT_SECRET: e2e-ci-only-secret
         run: sh ./e2e/run-fast.sh chat
 
+      - name: Run grounded answer stream
+        env:
+          RAG_JWT_SECRET: e2e-ci-only-secret
+        run: sh ./e2e/run-fast.sh stream
+
       - name: Cleanup fast E2E services
         if: ${{ always() }}
         env:
