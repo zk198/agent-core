@@ -79,6 +79,8 @@ async def chat(request: ChatRequest) -> ChatResponse:
         content, iterations, tool_calls = await agent.run_messages(input_messages, request.model)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.exception("agent_run_failed")
         raise HTTPException(status_code=502, detail="agent dependency failed") from exc
