@@ -86,3 +86,5 @@ assert "WEB_E2E_OK" in r.text
 ' | tee "$log_dir/agent-chat.json"
 
 echo "e2e tools web passed"
+
+# rerun after MCP ASGI deployment fix
