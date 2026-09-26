@@ -17,10 +17,10 @@ print(jwt.encode(
 PY
 )"
 
-docker compose -f ../rag-infra/compose.yaml -f compose.yaml up -d --build
+docker compose -f ../rag-infra/compose.yaml -f e2e/compose.yaml up -d --build
 
 cleanup() {
-  docker compose -f ../rag-infra/compose.yaml -f compose.yaml down -v
+  docker compose -f ../rag-infra/compose.yaml -f e2e/compose.yaml down -v
 }
 trap cleanup EXIT
 
