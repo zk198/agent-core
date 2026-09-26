@@ -26,7 +26,7 @@ export AGENT_MCP_AUTH_TOKENS="$RAG_E2E_TOKEN"
 export AI_GATEWAY_PORT="18001"
 
 script_dir=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
-compose="docker compose -f $script_dir/../rag-infra/compose.yaml -f $script_dir/compose.yaml"
+compose="docker compose -f $script_dir/../../rag-infra/compose.yaml -f $script_dir/compose.yaml"
 log_dir="${RUNNER_TEMP:-/tmp}/rag-e2e-full"
 mkdir -p "$log_dir"
 
