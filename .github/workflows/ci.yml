@@ -38,10 +38,31 @@ jobs:
           ref: f1d3b42c1a0f58a73f546aee1240e6cb85226ac8
           path: rag-gateway
 
-      - name: Run fast agent E2E
+      - name: Build fast E2E images
         env:
           RAG_JWT_SECRET: e2e-ci-only-secret
-        run: ./e2e/run-fast.sh
+        run: ./e2e/run-fast.sh build
+
+      - name: Start fast E2E services
+        env:
+          RAG_JWT_SECRET: e2e-ci-only-secret
+        run: ./e2e/run-fast.sh start
+
+      - name: Discover MCP tools
+        env:
+          RAG_JWT_SECRET: e2e-ci-only-secret
+        run: ./e2e/run-fast.sh discover
+
+      - name: Run fast agent chat
+        env:
+          RAG_JWT_SECRET: e2e-ci-only-secret
+        run: ./e2e/run-fast.sh chat
+
+      - name: Cleanup fast E2E services
+        if: ${{ always() }}
+        env:
+          RAG_JWT_SECRET: e2e-ci-only-secret
+        run: ./e2e/run-fast.sh cleanup
 
       - name: Upload fast E2E logs
         if: ${{ failure() }}
