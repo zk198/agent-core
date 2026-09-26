@@ -3,6 +3,9 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: "0 2 * * *"
 permissions:
   contents: read
   security-events: write
@@ -26,9 +29,32 @@ jobs:
           severity: CRITICAL,HIGH
           ignore-unfixed: true
 
-  rag-e2e:
+  rag-e2e-fast:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
+    env:
+      RAG_JWT_SECRET: ci-rag-e2e-secret-32-bytes-minimum!
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Checkout RAG gateway
+        run: git clone --depth 1 https://github.com/zk198/rag-gateway.git ../rag-gateway
+
+      - name: Run agent to gateway MCP E2E
+        run: sh e2e/run-fast.sh
+
+      - name: Upload fast E2E diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: rag-e2e-fast-diagnostics
+          path: ${{ runner.temp }}/rag-e2e-fast/
+          if-no-files-found: ignore
+
+  rag-e2e-full:
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
     env:
       RAG_JWT_SECRET: ci-rag-e2e-secret-32-bytes-minimum!
     steps:
@@ -42,5 +68,13 @@ jobs:
           git clone --depth 1 https://github.com/zk198/rag-retrieval.git ../rag-retrieval
           git clone --depth 1 https://github.com/zk198/rag-gateway.git ../rag-gateway
 
-      - name: Run agent to RAG end-to-end test
+      - name: Run full ingestion/indexing/RAG E2E
         run: sh e2e/run.sh
+
+      - name: Upload full E2E diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: rag-e2e-full-diagnostics
+          path: ${{ runner.temp }}/rag-e2e-full/
+          if-no-files-found: ignore
