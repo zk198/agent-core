@@ -83,4 +83,4 @@ assert "CODE_E2E_OK" in r.text
 
 echo "e2e tools code passed"
 
-# MCP launcher validation follows the tool container branch.
+# MCP compatibility validation follows the tool container branch.
