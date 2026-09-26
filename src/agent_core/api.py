@@ -102,6 +102,7 @@ async def answer_stream(request: AnswerRequest) -> StreamingResponse:
                             "citations": citations,
                             "iterations": item["iterations"],
                             "tool_calls": item["tool_calls"],
+                            "conversation_id": request.conversation_id,
                         },
                         ensure_ascii=False,
                     )
