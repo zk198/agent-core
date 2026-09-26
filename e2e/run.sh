@@ -95,12 +95,12 @@ wait_for "ai-gateway" "http://localhost:18001/healthz"
 
 log "uploading marker"
 printf 'RAG_E2E_MARKER: integration path from agent-core through MCP into indexed RAG content.\n' > /tmp/rag-e2e.txt
-curl -fsS --max-time 30   -X POST   -H "Authorization: Bearer ${RAG_E2E_TOKEN}"   -F "file=@/tmp/rag-e2e.txt"   -F "source_name=e2e"   http://localhost:18001/upload | tee "$log_dir/upload.json"
+curl -fsS --max-time 15   -X POST   -H "Authorization: Bearer ${RAG_E2E_TOKEN}"   -F "file=@/tmp/rag-e2e.txt"   -F "source_name=e2e"   http://localhost:18001/upload | tee "$log_dir/upload.json"
 
 log "waiting for indexed marker"
 i=0
-while [ "$i" -lt 40 ]; do
-  log "retrieval poll $i/40"
+while [ "$i" -lt 20 ]; do
+  log "retrieval poll $i/20"
   if curl -fsS --max-time 10       -X POST       -H "Authorization: Bearer ${RAG_E2E_TOKEN}"       -H "Content-Type: application/json"       -d '{"query":"RAG_E2E_MARKER","limit":3}'       http://localhost:18001/search | tee "$log_dir/search-$i.json" | grep -q 'RAG_E2E_MARKER'; then
     break
   fi
@@ -115,7 +115,7 @@ while [ "$i" -lt 40 ]; do
   fi
   sleep 2
 done
-[ "$i" -lt 40 ]
+[ "$i" -lt 20 ]
 
 log "marker indexed; calling agent directly"
 $compose exec -T agent-core python -c 'import httpx; r=httpx.post("http://127.0.0.1:8000/api/v1/chat", json={"message":"Find the RAG E2E marker."}, timeout=60); print(r.text); r.raise_for_status()' | tee "$log_dir/agent-chat.json"
