@@ -1,4 +1,5 @@
 import json
+
 import pytest
 
 from agent_core.agent import Agent
@@ -77,6 +78,52 @@ async def test_agent_executes_tool_then_returns_answer():
     agent.client = FakeClient()
     result = await agent.run("hello")
     assert result == ("done", 2, 1)
+
+
+@pytest.mark.asyncio
+async def test_agent_rejects_malformed_tool_arguments():
+    class BadArgs(FakeClient):
+        def __init__(self):
+            super().__init__()
+
+            class BadFunction:
+                name = "web__echo"
+                arguments = "["
+
+            class BadCall:
+                id = "call-bad"
+                type = "function"
+                function = BadFunction()
+
+            class BadToolMessage(FakeMessage):
+                tool_calls = [BadCall()]
+                content = None
+
+            async def create(_self, **kwargs):
+                return FakeResponse(BadToolMessage())
+
+            self.chat.completions = type("C", (), {"create": create})()
+
+    agent = Agent(Settings(max_iterations=3), FakeRegistry())
+    agent.client = BadArgs()
+    with pytest.raises(RuntimeError, match="invalid arguments"):
+        await agent.run("hello")
+
+
+@pytest.mark.asyncio
+async def test_agent_enforces_tool_call_limit():
+    class Endless(FakeClient):
+        def __init__(self):
+            super().__init__()
+            self.chat.completions = type("C", (), {"create": self.create})()
+
+        async def create(self, **kwargs):
+            return FakeResponse(ToolMessage())
+
+    agent = Agent(Settings(max_iterations=32, max_tool_calls=1), FakeRegistry())
+    agent.client = Endless()
+    with pytest.raises(RuntimeError, match="tool call limit"):
+        await agent.run("hello")
 
 
 @pytest.mark.asyncio

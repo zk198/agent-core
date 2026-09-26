@@ -5,7 +5,7 @@ from agent_core.config import Settings
 
 def test_default_mcp_servers_include_rag_gateway():
     settings = Settings()
-    assert "rag-gateway:8001/mcp" in settings.mcp_servers
+    assert "rag-gateway:8200/mcp" in settings.mcp_servers
 
 
 def test_default_empty_mcp_auth_tokens_are_allowed():
@@ -36,6 +36,16 @@ def test_mcp_server_names_must_align():
     settings = Settings(mcp_servers="a,b", mcp_server_names="one")
     with pytest.raises(ValueError, match="AGENT_MCP_SERVER_NAMES"):
         settings.mcp_server_configs()
+
+
+def test_mcp_server_names_must_be_unique_and_non_empty():
+    duplicate = Settings(mcp_servers="a,b", mcp_server_names="web,web")
+    with pytest.raises(ValueError, match="unique"):
+        duplicate.mcp_server_configs()
+
+    empty = Settings(mcp_servers="a,b", mcp_server_names="web,")
+    with pytest.raises(ValueError, match="unique"):
+        empty.mcp_server_configs()
 
 
 def test_mcp_auth_tokens_must_align():
