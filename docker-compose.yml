@@ -1,12 +1,13 @@
 services:
   agent-core:
     build: .
-    ports: ["8000:8000"]
+    expose: ["8000"]
     environment:
       AGENT_MODEL_BASE_URL: http://llm-gateway:8080/v1
       AGENT_MODEL_API_KEY: local
       AGENT_MODEL_NAME: local/default
-      AGENT_MCP_SERVERS: http://agent-tools-web:8001/mcp,http://agent-tools-code:8001/mcp
+      AGENT_MCP_SERVER_NAMES: web,code,rag
+      AGENT_MCP_SERVERS: http://agent-tools-web:8001/mcp,http://agent-tools-code:8001/mcp,http://ai-gateway:8200/mcp/
 
   mock-llm:
     image: nginx:1.29-alpine
