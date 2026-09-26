@@ -84,7 +84,7 @@ start_agent() {
   $compose up -d agent-core
 }
 wait_agent() { wait_for "agent-core" "http://localhost:18000/api/v1/health"; }
-wait_gateway() { wait_for "ai-gateway" "http://localhost:18001/healthz"; }
+wait_gateway() { wait_for "ai-gateway (host 18001 -> container 8200)" "http://localhost:18001/health"; }
 
 gateway_chat() {
   log "calling agent through ai-gateway session boundary"
