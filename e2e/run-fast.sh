@@ -72,9 +72,9 @@ build() {
 start() {
   log "starting fast E2E services"
   $compose up -d
-  wait_for "agent-core" "http://localhost:18000/api/v1/health"
-  wait_for "rag-gateway" "http://localhost:18001/healthz"
 }
+wait_agent() { wait_for "agent-core" "http://localhost:18000/api/v1/health"; }
+wait_gateway() { wait_for "rag-gateway" "http://localhost:18001/healthz"; }
 
 discover() {
   log "discovering MCP tools through agent-core"
@@ -100,7 +100,7 @@ cleanup() {
 
 case "${1:-all}" in
   build) build ;;
-  start) start ;;
+  start) start ;;\n  wait-agent) wait_agent ;;\n  wait-gateway) wait_gateway ;;
   discover) discover ;;
   chat) chat ;;
   cleanup) cleanup ;;
@@ -112,7 +112,7 @@ case "${1:-all}" in
     chat
     ;;
   *)
-    echo "usage: $0 [build|start|discover|chat|cleanup|all]" >&2
+    echo "usage: $0 [build|start|wait-agent|wait-gateway|discover|chat|cleanup|all]" >&2
     exit 2
     ;;
 esac
