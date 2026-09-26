@@ -116,11 +116,11 @@ jobs:
 
       - name: Checkout focused full-stack repositories
         run: |
-          git clone --depth 1 --branch phase-1c-ai-gateway-integration https://github.com/zk198/rag-infra.git ../rag-infra
+          git clone --depth 1 --branch main https://github.com/zk198/rag-infra.git ../rag-infra
           git clone --depth 1 --branch main https://github.com/zk198/rag-ingestion.git ../rag-ingestion
           git clone --depth 1 --branch main https://github.com/zk198/rag-indexer.git ../rag-indexer
           git clone --depth 1 --branch main https://github.com/zk198/rag-retrieval.git ../rag-retrieval
-          git clone --depth 1 --branch phase-1c-ai-gateway-session https://github.com/zk198/ai-gateway.git ../ai-gateway
+          git clone --depth 1 --branch main https://github.com/zk198/ai-gateway.git ../ai-gateway
           git clone --depth 1 --branch phase-1c-internal-compose https://github.com/zk198/agent-tools-web.git ../agent-tools-web
           git clone --depth 1 --branch main https://github.com/zk198/agent-tools-code.git ../agent-tools-code
 
