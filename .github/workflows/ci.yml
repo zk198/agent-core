@@ -50,12 +50,7 @@ jobs:
       - name: Build mock retrieval image
         run: docker build --progress=plain -t mock-retrieval:e2e -f e2e/mock-retrieval/Dockerfile .
 
-      - name: Start mock LLM
-        env:
-          RAG_JWT_SECRET: e2e-ci-only-secret
-        run: sh ./e2e/run-fast.sh start-mocks
-
-      - name: Start mock retrieval
+      - name: Start mock services
         env:
           RAG_JWT_SECRET: e2e-ci-only-secret
         run: sh ./e2e/run-fast.sh start-mocks
