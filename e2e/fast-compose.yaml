@@ -1,6 +1,6 @@
 services:
   rag-gateway:
-    build: ../rag-gateway
+    build: ../../rag-gateway
     environment:
       RAG_RETRIEVAL_URL: http://mock-retrieval:8100
       RAG_INGESTION_URL: http://mock-retrieval:8100
@@ -30,10 +30,10 @@ services:
 
   mock-llm:
     build:
-      context: .
+      context: ..
       dockerfile: e2e/mock-llm/Dockerfile
 
   mock-retrieval:
     build:
-      context: .
+      context: ..
       dockerfile: e2e/mock-retrieval/Dockerfile
