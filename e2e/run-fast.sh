@@ -32,34 +32,63 @@ compose="docker compose -f e2e/fast-compose.yaml"
 log_dir="${RUNNER_TEMP:-/tmp}/rag-e2e-fast"
 mkdir -p "$log_dir"
 
-echo "[$(date -u +%FT%TZ)] compose config"
+log() {
+  echo "[$(date -u +%FT%TZ)] $*"
+}
+
+dump_state() {
+  log "compose state"
+  $compose ps || true
+  log "compose images"
+  $compose images || true
+  log "compose logs"
+  $compose logs --no-color --timestamps || true
+}
+
+wait_for() {
+  name="$1"
+  url="$2"
+  deadline=$(($(date +%s) + 60))
+  log "waiting for $name: $url"
+  while ! curl -fsS --max-time 2 "$url" >/dev/null; do
+    if [ "$(date +%s)" -ge "$deadline" ]; then
+      log "timeout waiting for $name"
+      dump_state
+      return 1
+    fi
+    sleep 2
+  done
+  log "$name ready"
+}
+
+log "compose config"
 $compose config > "$log_dir/compose-config.txt"
 
-echo "[$(date -u +%FT%TZ)] building fast E2E services"
+log "building fast E2E services"
 $compose build --progress=plain 2>&1 | tee "$log_dir/build.log"
 
 cleanup() {
-  echo "[$(date -u +%FT%TZ)] final compose state"
-  $compose ps || true
-  $compose logs --no-color --timestamps || true
+  log "final compose state"
+  dump_state
   $compose down -v || true
 }
 trap cleanup EXIT
 
-echo "[$(date -u +%FT%TZ)] starting fast E2E services"
+log "starting fast E2E services"
 $compose up -d
 
-until curl -fsS http://localhost:18000/api/v1/health >/dev/null; do
-  $compose ps
-  sleep 2
-done
-until curl -fsS http://localhost:18001/healthz >/dev/null; do
-  $compose ps
-  sleep 2
-done
+wait_for "agent-core" "http://localhost:18000/api/v1/health"
+wait_for "rag-gateway" "http://localhost:18001/healthz"
 
-echo "[$(date -u +%FT%TZ)] calling agent"
-curl -fsS   -X POST   -H "Content-Type: application/json"   -d '{"message":"Find the RAG E2E marker."}'   http://localhost:18000/api/v1/chat | tee "$log_dir/chat.json"
+log "discovering MCP tools through agent-core"
+curl -fsS --max-time 30 http://localhost:18000/api/v1/tools | tee "$log_dir/tools.json"
+
+log "calling agent"
+curl -fsS --max-time 60 \
+  -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Find the RAG E2E marker."}' \
+  http://localhost:18000/api/v1/chat | tee "$log_dir/chat.json"
 
 grep -q 'RAG_E2E_OK' "$log_dir/chat.json"
-echo "[$(date -u +%FT%TZ)] fast E2E passed"
+log "fast E2E passed"
