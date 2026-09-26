@@ -1,5 +1,5 @@
 services:
   mock-llm:
     build:
-      context: ..
+      context: ${AGENT_CORE_DIR:?set by e2e runner}
       dockerfile: e2e/mock-llm/Dockerfile
