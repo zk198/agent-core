@@ -25,3 +25,76 @@ jobs:
           exit-code: "1"
           severity: CRITICAL,HIGH
           ignore-unfixed: true
+
+  fast-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Checkout RAG gateway
+        uses: actions/checkout@v6
+        with:
+          repository: zk198/rag-gateway
+          ref: f1d3b42c1a0f58a73f546aee1240e6cb85226ac8
+          path: rag-gateway
+
+      - name: Build RAG gateway image
+        run: docker build --progress=plain -t rag-gateway:e2e ./rag-gateway
+
+      - name: Build agent-core image
+        run: docker build --progress=plain -t agent-core:e2e .
+
+      - name: Build mock LLM image
+        run: docker build --progress=plain -t mock-llm:e2e -f e2e/mock-llm/Dockerfile .
+
+      - name: Build mock retrieval image
+        run: docker build --progress=plain -t mock-retrieval:e2e -f e2e/mock-retrieval/Dockerfile .
+
+      - name: Start mock services
+        env:
+          RAG_JWT_SECRET: e2e-ci-only-secret
+        run: sh ./e2e/run-fast.sh start-mocks
+
+      - name: Start RAG gateway
+        env:
+          RAG_JWT_SECRET: e2e-ci-only-secret
+        run: sh ./e2e/run-fast.sh start-gateway
+
+      - name: Start agent-core
+        env:
+          RAG_JWT_SECRET: e2e-ci-only-secret
+        run: sh ./e2e/run-fast.sh start-agent
+
+      - name: Wait for agent-core
+        env:
+          RAG_JWT_SECRET: e2e-ci-only-secret
+        run: sh ./e2e/run-fast.sh wait-agent
+
+      - name: Wait for RAG gateway
+        env:
+          RAG_JWT_SECRET: e2e-ci-only-secret
+        run: sh ./e2e/run-fast.sh wait-gateway
+
+      - name: Discover MCP tools
+        env:
+          RAG_JWT_SECRET: e2e-ci-only-secret
+        run: sh ./e2e/run-fast.sh discover
+
+      - name: Run fast agent chat
+        env:
+          RAG_JWT_SECRET: e2e-ci-only-secret
+        run: sh ./e2e/run-fast.sh chat
+
+      - name: Cleanup fast E2E services
+        if: ${{ always() }}
+        env:
+          RAG_JWT_SECRET: e2e-ci-only-secret
+        run: sh ./e2e/run-fast.sh cleanup
+
+      - name: Upload fast E2E logs
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: agent-core-fast-e2e-logs
+          path: ${{ runner.temp }}/rag-e2e-fast
+          if-no-files-found: ignore

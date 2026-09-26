@@ -1,6 +1,6 @@
 services:
   rag-gateway:
-    build: ../rag-gateway
+    image: rag-gateway:e2e
     environment:
       RAG_RETRIEVAL_URL: http://mock-retrieval:8100
       RAG_INGESTION_URL: http://mock-retrieval:8100
@@ -12,15 +12,15 @@ services:
         condition: service_started
 
   agent-core:
-    build: ..
+    image: agent-core:e2e
     ports:
       - "18000:8000"
     environment:
       AGENT_MODEL_BASE_URL: http://mock-llm:8080/v1
       AGENT_MODEL_API_KEY: e2e
       AGENT_MODEL_NAME: e2e/mock
-      AGENT_MCP_SERVERS: http://rag-gateway:8200/mcp
-      AGENT_MCP_AUTH_TOKENS: ${RAG_E2E_TOKEN:?set RAG_E2E_TOKEN}
+      AGENT_MCP_SERVERS: http://rag-gateway:8200/mcp/
+      AGENT_MCP_AUTH_TOKENS: ${RAG_E2E_TOKEN:-}
       AGENT_MCP_SERVER_NAMES: rag
     depends_on:
       rag-gateway:
@@ -29,11 +29,7 @@ services:
         condition: service_started
 
   mock-llm:
-    build:
-      context: ..
-      dockerfile: e2e/mock-llm/Dockerfile
+    image: mock-llm:e2e
 
   mock-retrieval:
-    build:
-      context: ..
-      dockerfile: e2e/mock-retrieval/Dockerfile
+    image: mock-retrieval:e2e

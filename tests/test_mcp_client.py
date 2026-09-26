@@ -1,6 +1,5 @@
 from fastmcp import FastMCP
 from fastmcp.client import Client
-from fastmcp.client.auth import BearerAuth
 from fastmcp.client.transports import StreamableHttpTransport
 
 import pytest
@@ -96,7 +95,7 @@ def test_remote_mcp_client_uses_streamable_http_transport_and_bearer_auth():
     client = registry._client(server)
 
     assert isinstance(client.transport, StreamableHttpTransport)
-    assert isinstance(client.transport.auth, BearerAuth)
+    assert client.transport.headers["Authorization"] == "Bearer secret"
 
 
 def test_remote_mcp_client_uses_streamable_http_without_auth_when_unconfigured():
@@ -106,4 +105,4 @@ def test_remote_mcp_client_uses_streamable_http_without_auth_when_unconfigured()
     client = registry._client(server)
 
     assert isinstance(client.transport, StreamableHttpTransport)
-    assert client.transport.auth is None
+    assert client.transport.headers == {}

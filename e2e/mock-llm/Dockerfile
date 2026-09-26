@@ -1,4 +1,4 @@
-FROM python:3.12-alpine
+FROM python:3.12-slim
 WORKDIR /app
 COPY e2e/mock-llm/app.py .
 CMD ["python", "app.py"]

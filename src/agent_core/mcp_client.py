@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from typing import Any
 
 from fastmcp import Client
-from fastmcp.client.auth import BearerAuth
 from fastmcp.client.transports import StreamableHttpTransport
 
 
@@ -48,8 +47,12 @@ class MCPRegistry:
             raise ValueError("MCP server names must be unique")
 
     def _client(self, server: MCPServer) -> Client:
-        auth = BearerAuth(server.auth_token) if server.auth_token else None
-        transport = StreamableHttpTransport(server.url, auth=auth)
+        headers = (
+            {"Authorization": f"Bearer {server.auth_token}"}
+            if server.auth_token
+            else None
+        )
+        transport = StreamableHttpTransport(server.url, headers=headers)
         return Client(transport)
 
     async def list_tools(self) -> list[MCPTool]:
