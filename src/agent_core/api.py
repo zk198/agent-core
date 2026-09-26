@@ -86,7 +86,7 @@ async def answer_stream(request: AnswerRequest) -> StreamingResponse:
         try:
             async for item in agent.stream_grounded_answer(request.question, request.model):
                 if item["type"] == "delta":
-                    yield f"event: delta\\ndata: {json.dumps({'content': item['content']}, ensure_ascii=False)}\\n\\n"
+                    yield f"event: delta\ndata: {json.dumps({'content': item['content']}, ensure_ascii=False)}\n\n"
                 else:
                     citations = [
                         {
@@ -105,10 +105,10 @@ async def answer_stream(request: AnswerRequest) -> StreamingResponse:
                         },
                         ensure_ascii=False,
                     )
-                    yield f"event: done\\ndata: {payload}\\n\\n"
+                    yield f"event: done\ndata: {payload}\n\n"
         except Exception:
             logger.exception("grounded_answer_stream_failed")
-            yield f"event: error\\ndata: {json.dumps({'detail': 'grounded answer dependency failed'})}\\n\\n"
+            yield f"event: error\ndata: {json.dumps({'detail': 'grounded answer dependency failed'})}\n\n"
 
     return StreamingResponse(
         events(),
