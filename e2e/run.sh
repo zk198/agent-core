@@ -91,7 +91,7 @@ wait_for_agent() {
   log "agent-core ready"
 }
 wait_for_agent
-wait_for "ai-gateway" "http://localhost:18001/healthz"
+wait_for "ai-gateway (host 18001 -> container 8200)" "http://localhost:18001/health"
 
 log "uploading marker"
 printf 'RAG_E2E_MARKER: integration path from agent-core through MCP into indexed RAG content.\n' > /tmp/rag-e2e.txt
