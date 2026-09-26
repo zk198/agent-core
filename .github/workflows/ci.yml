@@ -35,7 +35,7 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           repository: zk198/ai-gateway
-          ref: phase-1c-ai-gateway-session
+          ref: main
           path: ai-gateway
 
       - name: Build AI gateway image
@@ -109,19 +109,19 @@ jobs:
           path: ${{ runner.temp }}/rag-e2e-fast
           if-no-files-found: ignore
 
-  full-rag-e2e:
+  e2e-tools-rag:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
 
-      - name: Checkout focused full-stack repositories
+      - name: Checkout e2e tools rag repositories
         run: |
-          git clone --depth 1 --branch phase-1c-ai-gateway-integration https://github.com/zk198/rag-infra.git ../rag-infra
+          git clone --depth 1 --branch main https://github.com/zk198/rag-infra.git ../rag-infra
           git clone --depth 1 --branch main https://github.com/zk198/rag-ingestion.git ../rag-ingestion
           git clone --depth 1 --branch main https://github.com/zk198/rag-indexer.git ../rag-indexer
           git clone --depth 1 --branch main https://github.com/zk198/rag-retrieval.git ../rag-retrieval
           git clone --depth 1 --branch phase-1c-ai-gateway-session https://github.com/zk198/ai-gateway.git ../ai-gateway
-          git clone --depth 1 --branch phase-1c-internal-compose https://github.com/zk198/agent-tools-web.git ../agent-tools-web
+          git clone --depth 1 --branch main https://github.com/zk198/agent-tools-web.git ../agent-tools-web
           git clone --depth 1 --branch main https://github.com/zk198/agent-tools-code.git ../agent-tools-code
 
       - name: Run ai-gateway unit tests
@@ -129,7 +129,7 @@ jobs:
           python -m pip install --quiet -e "../ai-gateway[test]"
           python -m pytest "../ai-gateway/tests"
 
-      - name: Run focused full RAG E2E
+      - name: Run e2e tools rag
         env:
           RAG_JWT_SECRET: e2e-ci-only-secret
         run: sh ./e2e/run.sh
@@ -138,6 +138,50 @@ jobs:
         if: ${{ failure() }}
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
-          name: agent-core-full-rag-e2e-logs
+          name: agent-core-e2e-tools-rag-logs
           path: ${{ runner.temp }}/rag-e2e-full
+          if-no-files-found: ignore
+
+  e2e-tools-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - name: Checkout web tool
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          repository: zk198/agent-tools-web
+          ref: main
+          path: agent-tools-web
+      - name: Run e2e tools web
+        env:
+          AGENT_TOOLS_WEB_DIR: ${{ github.workspace }}/agent-tools-web
+        run: sh ./e2e/run-tools-web.sh
+      - name: Upload e2e tools web logs
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: agent-core-e2e-tools-web-logs
+          path: ${{ runner.temp }}/e2e-tools-web
+          if-no-files-found: ignore
+
+  e2e-tools-code:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - name: Checkout code tool
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          repository: zk198/agent-tools-code
+          ref: main
+          path: agent-tools-code
+      - name: Run e2e tools code
+        env:
+          AGENT_TOOLS_CODE_DIR: ${{ github.workspace }}/agent-tools-code
+        run: sh ./e2e/run-tools-code.sh
+      - name: Upload e2e tools code logs
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: agent-core-e2e-tools-code-logs
+          path: ${{ runner.temp }}/e2e-tools-code
           if-no-files-found: ignore
