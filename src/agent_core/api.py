@@ -79,6 +79,7 @@ async def tools() -> list[ToolInfo]:
 
 @app.post("/api/v1/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest) -> ChatResponse:
+    trace, trace_token = start_trace()
     try:
         if request.messages:
             input_messages = [item.model_dump() for item in request.messages]
@@ -87,15 +88,20 @@ async def chat(request: ChatRequest) -> ChatResponse:
         else:
             raise HTTPException(status_code=422, detail="message or messages is required")
         content, iterations, tool_calls = await agent.run_messages(input_messages, request.model)
+        trace.complete(status="completed")
+        return ChatResponse(content=content, iterations=iterations, tool_calls=tool_calls, trace=trace.to_dict())
     except ValueError as exc:
+        trace.complete(status="failed", error={"type": type(exc).__name__, "message": str(exc)})
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except HTTPException:
+        trace.complete(status="failed")
         raise
     except Exception as exc:
+        trace.complete(status="failed", error={"type": type(exc).__name__, "message": str(exc)})
         logger.exception("agent_run_failed")
         raise HTTPException(status_code=502, detail="agent dependency failed") from exc
-    return ChatResponse(content=content, iterations=iterations, tool_calls=tool_calls)
-
+    finally:
+        reset_trace(trace_token)
 
 
 @app.post("/api/v1/answer/stream")
@@ -105,6 +111,7 @@ async def answer_stream(request: AnswerRequest) -> StreamingResponse:
         raise HTTPException(status_code=422, detail="question or messages is required")
 
     async def events():
+        trace, trace_token = start_trace()
         try:
             async for item in agent.stream_grounded_answer(
                 request.question, request.model, conversation_messages=input_messages
@@ -112,27 +119,25 @@ async def answer_stream(request: AnswerRequest) -> StreamingResponse:
                 if item["type"] == "delta":
                     yield f"event: delta\ndata: {json.dumps({'content': item['content']}, ensure_ascii=False)}\n\n"
                 else:
+                    trace.complete(status="completed")
                     citations = [
-                        {
-                            "id": f"S{index}",
-                            "chunk_id": citation.chunk_id,
-                            "source_name": citation.source_name,
-                            "text": citation.text,
-                        }
+                        {"id": f"S{index}", "chunk_id": citation.chunk_id, "source_name": citation.source_name, "text": citation.text}
                         for index, citation in enumerate(item["citations"], start=1)
                     ]
-                    payload = json.dumps(
-                        {
-                            "citations": citations,
-                            "iterations": item["iterations"],
-                            "tool_calls": item["tool_calls"],
-                        },
-                        ensure_ascii=False,
-                    )
+                    payload = json.dumps({
+                        "citations": citations,
+                        "iterations": item["iterations"],
+                        "tool_calls": item["tool_calls"],
+                        "trace_id": trace.trace_id,
+                        "trace": trace.to_dict(),
+                    }, ensure_ascii=False)
                     yield f"event: done\ndata: {payload}\n\n"
-        except Exception:
+        except Exception as exc:
+            trace.complete(status="failed", error={"type": type(exc).__name__, "message": str(exc)})
             logger.exception("grounded_answer_stream_failed")
-            yield f"event: error\ndata: {json.dumps({'detail': 'grounded answer dependency failed'})}\n\n"
+            yield f"event: error\ndata: {json.dumps({'detail': 'grounded answer dependency failed', 'trace_id': trace.trace_id})}\n\n"
+        finally:
+            reset_trace(trace_token)
 
     return StreamingResponse(
         events(),
@@ -143,28 +148,30 @@ async def answer_stream(request: AnswerRequest) -> StreamingResponse:
 
 @app.post("/api/v1/answer", response_model=AnswerResponse)
 async def answer(request: AnswerRequest) -> AnswerResponse:
-    input_messages = [item.model_dump() for item in request.messages] if request.messages else None
-    if not input_messages and not request.question:
-        raise HTTPException(status_code=422, detail="question or messages is required")
+    trace, trace_token = start_trace()
     try:
+        input_messages = [item.model_dump() for item in request.messages] if request.messages else None
+        if not input_messages and not request.question:
+            raise HTTPException(status_code=422, detail="question or messages is required")
         result = await agent.run_grounded_answer(request.question, request.model, messages=input_messages)
+        trace.complete(status="completed")
+        citations = [
+            Citation(id=f"S{index}", chunk_id=item.chunk_id, source_name=item.source_name, text=item.text)
+            for index, item in enumerate(result.citations, start=1)
+        ]
+        return AnswerResponse(
+            answer=result.content,
+            citations=citations,
+            iterations=result.iterations,
+            tool_calls=result.tool_calls,
+            trace=trace.to_dict(),
+        )
     except ValueError as exc:
+        trace.complete(status="failed", error={"type": type(exc).__name__, "message": str(exc)})
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
+        trace.complete(status="failed", error={"type": type(exc).__name__, "message": str(exc)})
         logger.exception("grounded_answer_failed")
         raise HTTPException(status_code=502, detail="grounded answer dependency failed") from exc
-    citations = [
-        Citation(
-            id=f"S{index}",
-            chunk_id=item.chunk_id,
-            source_name=item.source_name,
-            text=item.text,
-        )
-        for index, item in enumerate(result.citations, start=1)
-    ]
-    return AnswerResponse(
-        answer=result.content,
-        citations=citations,
-        iterations=result.iterations,
-        tool_calls=result.tool_calls,
-    )
+    finally:
+        reset_trace(trace_token)
