@@ -112,7 +112,8 @@ def test_remote_mcp_client_propagates_request_id(monkeypatch):
     from agent_core.observability import set_request_id, reset_request_id
     token = set_request_id("phase1c-test-id")
     try:
-        client = MCPRegistry([MCPServer("https://example.test/mcp", name="rag")])._client(MCPServer("https://example.test/mcp", name="rag"))
+        server = MCPServer("https://example.test/mcp", name="rag")
+        client = MCPRegistry([server])._client(server)
         assert client.transport.headers["X-Request-ID"] == "phase1c-test-id"
     finally:
         reset_request_id(token)
