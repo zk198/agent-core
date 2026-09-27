@@ -1,5 +1,6 @@
 import json
 import logging
+import time
 from dataclasses import dataclass
 from typing import Any, cast
 
@@ -8,6 +9,7 @@ from openai import AsyncOpenAI
 from .config import Settings
 from .context import ContextBudget
 from .mcp_client import MCPRegistry
+from .observability import request_id
 
 logger = logging.getLogger(__name__)
 
@@ -189,6 +191,7 @@ class Agent:
         tool_calls_total = 0
 
         for iteration in range(1, self.settings.max_iterations + 1):
+            llm_started = time.perf_counter()
             stream = await self.client.chat.completions.create(
                 model=model or self.settings.model_name,
                 messages=messages,
@@ -219,6 +222,11 @@ class Agent:
                             current["function"]["name"] = tool_call.function.name
                         if tool_call.function.arguments:
                             current["function"]["arguments"] += tool_call.function.arguments
+
+            logger.info(
+                "llm_stage request_id=%s llm_ms=%.1f iteration=%s streaming=true",
+                request_id(), (time.perf_counter() - llm_started) * 1000, iteration,
+            )
 
             if not tool_calls:
                 yield {
@@ -252,7 +260,14 @@ class Agent:
                     raise RuntimeError(f"invalid arguments for tool {function['name']}") from exc
                 if not isinstance(args, dict):
                     raise RuntimeError(f"tool arguments for {function['name']} must be an object")
+                tool_started = time.perf_counter()
                 result = await self.registry.call(target.server, target.name, args)
+                tool_ms = (time.perf_counter() - tool_started) * 1000
+                stage = "retrieval" if target.server_name == "rag" else "tool"
+                logger.info(
+                    "tool_stage request_id=%s stage=%s tool=%s tool_ms=%.1f",
+                    request_id(), stage, target.qualified_name, tool_ms,
+                )
                 new_evidence: list[CitationEvidence] = []
                 for item in _extract_rag_evidence(result):
                     if item not in evidence:
@@ -315,10 +330,15 @@ class Agent:
                 len(tools),
                 tool_calls_total,
             )
+            llm_started = time.perf_counter()
             response = await self.client.chat.completions.create(
                 model=model or self.settings.model_name,
                 messages=messages,
                 tools=cast(Any, openai_tools or None),
+            )
+            logger.info(
+                "llm_stage request_id=%s stage=llm llm_ms=%.1f iteration=%s streaming=false",
+                request_id(), (time.perf_counter() - llm_started) * 1000, iteration,
             )
             if not response.choices:
                 raise RuntimeError("model returned no choices")

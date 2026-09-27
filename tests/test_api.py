@@ -163,3 +163,21 @@ def test_grounded_answer_accepts_message_history(monkeypatch):
     )
     assert response.status_code == 200
     assert response.json()["answer"] == "grounded"
+
+
+def test_request_id_is_returned():
+    response = TestClient(app).get("/api/v1/health", headers={"X-Request-ID": "phase1c-test-id"})
+    assert response.status_code == 200
+    assert response.headers["X-Request-ID"] == "phase1c-test-id"
+
+
+def test_grounded_answer_maps_agent_failure_to_502(monkeypatch):
+    import agent_core.api as api
+
+    async def failing_answer(question=None, model=None, *, messages=None):
+        raise RuntimeError("model unavailable")
+
+    monkeypatch.setattr(api.agent, "run_grounded_answer", failing_answer)
+    response = TestClient(app).post("/api/v1/answer", json={"question": "What?"})
+    assert response.status_code == 502
+    assert response.json()["detail"] == "grounded answer dependency failed"
