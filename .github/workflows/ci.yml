@@ -165,7 +165,7 @@ jobs:
           path: agent-tools-code
       - name: Arrange e2e tools rag Compose siblings
         run: |
-          mv "$GITHUB_WORKSPACE/../ai-infra" "$GITHUB_WORKSPACE/../ai-infra"
+          mv "$GITHUB_WORKSPACE/ai-infra" "$GITHUB_WORKSPACE/../ai-infra"
           mv "$GITHUB_WORKSPACE/rag-ingestion" "$GITHUB_WORKSPACE/../rag-ingestion"
           mv "$GITHUB_WORKSPACE/rag-indexer" "$GITHUB_WORKSPACE/../rag-indexer"
           mv "$GITHUB_WORKSPACE/rag-retrieval" "$GITHUB_WORKSPACE/../rag-retrieval"
