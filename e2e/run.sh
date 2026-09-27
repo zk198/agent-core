@@ -27,7 +27,7 @@ export AI_GATEWAY_PORT="18001"
 
 script_dir=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 export AGENT_CORE_DIR="$(CDPATH= cd -- "$script_dir/.." && pwd)"
-compose="docker compose -f $script_dir/../../rag-infra/compose.yaml -f $script_dir/compose.yaml"
+compose="docker compose -f $script_dir/../../ai-infra/compose.yaml -f $script_dir/compose.yaml"
 log_dir="${RUNNER_TEMP:-/tmp}/e2e-tools-rag"
 mkdir -p "$log_dir"
 
