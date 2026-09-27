@@ -75,18 +75,25 @@ class ExecutionTrace:
         })
         return event_id
 
-    def finish_event(\n        self,\n        event_id: str,\n        *,\n        status: str = "completed",\n        payload: dict[str, Any] | None = None,\n        duration_ms: float | None = None,\n    ) -> None:
+    def finish_event(
+        self,
+        event_id: str,
+        *,
+        status: str = "completed",
+        payload: dict[str, Any] | None = None,
+        duration_ms: float | None = None,
+    ) -> None:
         for item in self.events:
             if item["event_id"] == event_id:
                 item["status"] = status
                 item["duration_ms"] = duration_ms
                 if payload:
                     item["payload"].update(payload)
-                item["completed_at"] = datetime.now(timezone.utc).isoformat()
+                item["completed_at"] = datetime.now(UTC).isoformat()
                 return
 
     def log(self, *, level: str, message: str, **fields: Any) -> None:
-        self.logs.append({"timestamp": datetime.now(timezone.utc).isoformat(), "level": level, "message": message, **fields})
+        self.logs.append({\n            "timestamp": datetime.now(UTC).isoformat(),\n            "level": level,\n            "message": message,\n            **fields,\n        })
 
     def metric(self, name: str, value: Any) -> None:
         self.metrics[name] = value
@@ -94,7 +101,7 @@ class ExecutionTrace:
     def complete(self, *, status: str = "completed", error: dict[str, Any] | None = None) -> None:
         self.status = status
         self.error = error
-        self.completed_at = datetime.now(timezone.utc).isoformat()
+        self.completed_at = datetime.now(UTC).isoformat()
         self.metrics["duration_ms"] = round((time.perf_counter() - self._started) * 1000, 1)
         self.metrics["trace_events"] = len(self.events)
 
