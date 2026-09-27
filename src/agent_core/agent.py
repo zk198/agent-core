@@ -168,7 +168,9 @@ class Agent:
             }
             for tool in tools
         ]
-        input_messages: list[Any] = conversation_messages or ([{"role": "user", "content": question}] if question else [])
+        input_messages: list[Any] = conversation_messages or (
+            [{"role": "user", "content": question}] if question else []
+        )
         if not input_messages:
             raise ValueError("question or messages is required")
         messages: list[Any] = [{"role": "system", "content": system_prompt}, *input_messages]
