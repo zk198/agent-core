@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from typing import Any\n\nfrom pydantic import BaseModel, Field
 
 class ChatMessage(BaseModel):
     role: str = Field(pattern="^(system|user|assistant|tool)$")
