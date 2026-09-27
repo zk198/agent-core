@@ -258,7 +258,11 @@ class Agent:
                 if not isinstance(args, dict):
                     raise RuntimeError(f"tool arguments for {function['name']} must be an object")
                 tool_started = time.perf_counter()
+                tool_started = time.perf_counter()
                 result = await self.registry.call(target.server, target.name, args)
+                tool_ms = (time.perf_counter() - tool_started) * 1000
+                stage = "retrieval" if target.server_name == "rag" else "tool"
+                logger.info("tool_stage request_id=%s stage=%s tool=%s tool_ms=%.1f", request_id(), stage, target.qualified_name, tool_ms)
                 tool_ms = (time.perf_counter() - tool_started) * 1000
                 stage = "retrieval" if target.server_name == "rag" else "tool"
                 logger.info("tool_stage request_id=%s stage=%s tool=%s tool_ms=%.1f", request_id(), stage, target.qualified_name, tool_ms)
@@ -324,11 +328,13 @@ class Agent:
                 len(tools),
                 tool_calls_total,
             )
+            llm_started = time.perf_counter()
             response = await self.client.chat.completions.create(
                 model=model or self.settings.model_name,
                 messages=messages,
                 tools=cast(Any, openai_tools or None),
             )
+            logger.info("llm_stage request_id=%s stage=llm llm_ms=%.1f iteration=%s streaming=false", request_id(), (time.perf_counter() - llm_started) * 1000, iteration)
             if not response.choices:
                 raise RuntimeError("model returned no choices")
 
