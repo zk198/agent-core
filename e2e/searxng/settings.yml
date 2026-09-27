@@ -1,0 +1,30 @@
+use_default_settings:
+  engines:
+    keep_only:
+      - e2e-json
+
+general:
+  debug: false
+  instance_name: "SearXNG E2E"
+
+server:
+  bind_address: "0.0.0.0"
+  secret_key: "e2e-only-secret"
+
+search:
+  formats:
+    - json
+
+engines:
+  - name: e2e-json
+    engine: json_engine
+    shortcut: e2e
+    categories: general
+    disabled: false
+    enable_http: true
+    timeout: 5.0
+    search_url: "http://mock-search:8080/search?q={query}"
+    results_query: results
+    url_query: url
+    title_query: title
+    content_query: content

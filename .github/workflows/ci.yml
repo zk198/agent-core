@@ -1,4 +1,5 @@
 name: CI
+# Tool E2Es use the MCP-server container branches until merged.
 on:
   pull_request:
   push:
@@ -35,7 +36,7 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           repository: zk198/ai-gateway
-          ref: phase-1c-ai-gateway-session
+          ref: fix/standardize-health-endpoint
           path: ai-gateway
 
       - name: Build AI gateway image
@@ -109,35 +110,118 @@ jobs:
           path: ${{ runner.temp }}/rag-e2e-fast
           if-no-files-found: ignore
 
-  full-rag-e2e:
+  e2e-tools-rag:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
 
-      - name: Checkout focused full-stack repositories
-        run: |
-          git clone --depth 1 --branch phase-1c-ai-gateway-integration https://github.com/zk198/rag-infra.git ../rag-infra
-          git clone --depth 1 --branch main https://github.com/zk198/rag-ingestion.git ../rag-ingestion
-          git clone --depth 1 --branch main https://github.com/zk198/rag-indexer.git ../rag-indexer
-          git clone --depth 1 --branch main https://github.com/zk198/rag-retrieval.git ../rag-retrieval
-          git clone --depth 1 --branch phase-1c-ai-gateway-session https://github.com/zk198/ai-gateway.git ../ai-gateway
-          git clone --depth 1 --branch phase-1c-internal-compose https://github.com/zk198/agent-tools-web.git ../agent-tools-web
-          git clone --depth 1 --branch main https://github.com/zk198/agent-tools-code.git ../agent-tools-code
+      - name: Checkout rag-infra
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          repository: zk198/rag-infra
+          ref: main
+          path: rag-infra
+      - name: Checkout rag-ingestion
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          repository: zk198/rag-ingestion
+          ref: main
+          path: rag-ingestion
+      - name: Checkout rag-indexer
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          repository: zk198/rag-indexer
+          ref: main
+          path: rag-indexer
+      - name: Checkout rag-retrieval
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          repository: zk198/rag-retrieval
+          ref: main
+          path: rag-retrieval
+      - name: Checkout ai-gateway
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          repository: zk198/ai-gateway
+          ref: fix/standardize-health-endpoint
+          path: ai-gateway
 
-      - name: Run ai-gateway unit tests
-        run: |
-          python -m pip install --quiet -e "../ai-gateway[test]"
-          python -m pytest "../ai-gateway/tests"
 
-      - name: Run focused full RAG E2E
+      - name: Checkout agent-tools-web
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          repository: zk198/agent-tools-web
+          ref: fix/start-mcp-http-server
+          path: agent-tools-web
+      - name: Checkout agent-tools-code
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          repository: zk198/agent-tools-code
+          ref: fix/start-mcp-http-server
+          path: agent-tools-code
+      - name: Arrange e2e tools rag Compose siblings
+        run: |
+          mv "$GITHUB_WORKSPACE/rag-infra" "$GITHUB_WORKSPACE/../rag-infra"
+          mv "$GITHUB_WORKSPACE/rag-ingestion" "$GITHUB_WORKSPACE/../rag-ingestion"
+          mv "$GITHUB_WORKSPACE/rag-indexer" "$GITHUB_WORKSPACE/../rag-indexer"
+          mv "$GITHUB_WORKSPACE/rag-retrieval" "$GITHUB_WORKSPACE/../rag-retrieval"
+          mv "$GITHUB_WORKSPACE/ai-gateway" "$GITHUB_WORKSPACE/../ai-gateway"
+          mv "$GITHUB_WORKSPACE/agent-tools-web" "$GITHUB_WORKSPACE/../agent-tools-web"
+          mv "$GITHUB_WORKSPACE/agent-tools-code" "$GITHUB_WORKSPACE/../agent-tools-code"
+
+      - name: Run e2e tools rag
         env:
           RAG_JWT_SECRET: e2e-ci-only-secret
         run: sh ./e2e/run.sh
 
-      - name: Upload full E2E logs
+      - name: Upload e2e tools rag logs
         if: ${{ failure() }}
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
-          name: agent-core-full-rag-e2e-logs
-          path: ${{ runner.temp }}/rag-e2e-full
+          name: agent-core-e2e-tools-rag-logs
+          path: ${{ runner.temp }}/e2e-tools-rag
+          if-no-files-found: ignore
+
+  e2e-tools-web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - name: Checkout web tool
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          repository: zk198/agent-tools-web
+          ref: 3a7d3bc39d8c4fcb900eaf1c895859aebea78a40
+          path: agent-tools-web
+      - name: Run e2e tools web
+        env:
+          AGENT_TOOLS_WEB_DIR: ${{ github.workspace }}/agent-tools-web
+        run: sh ./e2e/run-tools-web.sh
+      - name: Upload e2e tools web logs
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: agent-core-e2e-tools-web-logs
+          path: ${{ runner.temp }}/e2e-tools-web
+          if-no-files-found: ignore
+
+  e2e-tools-code:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+      - name: Checkout code tool
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          repository: zk198/agent-tools-code
+          ref: 9c90bbd57dbc860f76ee50ce2e07dd4f6d18a86f
+          path: agent-tools-code
+      - name: Run e2e tools code
+        env:
+          AGENT_TOOLS_CODE_DIR: ${{ github.workspace }}/agent-tools-code
+        run: sh ./e2e/run-tools-code.sh
+      - name: Upload e2e tools code logs
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: agent-core-e2e-tools-code-logs
+          path: ${{ runner.temp }}/e2e-tools-code
           if-no-files-found: ignore
