@@ -9,7 +9,7 @@ from .agent import Agent
 from .config import Settings
 from .mcp_client import MCPRegistry
 from .models import AnswerRequest, AnswerResponse, ChatRequest, ChatResponse, Citation, ToolInfo
-from .observability import normalize_request_id, request_id, reset_request_id, set_request_id
+from .observability import normalize_request_id, reset_request_id, set_request_id
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("agent_core")
@@ -29,7 +29,10 @@ async def request_logging(request: Request, call_next):
     try:
         response = await call_next(request)
     except Exception:
-        logger.exception("request_failed request_id=%s method=%s path=%s", request_value, request.method, request.url.path)
+        logger.exception(
+            "request_failed request_id=%s method=%s path=%s",
+            request_value, request.method, request.url.path,
+        )
         reset_request_id(token)
         raise
     logger.info(
