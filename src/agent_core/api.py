@@ -90,9 +90,15 @@ async def chat(request: ChatRequest) -> ChatResponse:
 
 @app.post("/api/v1/answer/stream")
 async def answer_stream(request: AnswerRequest) -> StreamingResponse:
+    input_messages = [item.model_dump() for item in request.messages] if request.messages else None
+    if not input_messages and not request.question:
+        raise HTTPException(status_code=422, detail="question or messages is required")
+
     async def events():
         try:
-            async for item in agent.stream_grounded_answer(request.question, request.model):
+            async for item in agent.stream_grounded_answer(
+                request.question, request.model, conversation_messages=input_messages
+            ):
                 if item["type"] == "delta":
                     yield f"event: delta\ndata: {json.dumps({'content': item['content']}, ensure_ascii=False)}\n\n"
                 else:
@@ -127,8 +133,11 @@ async def answer_stream(request: AnswerRequest) -> StreamingResponse:
 
 @app.post("/api/v1/answer", response_model=AnswerResponse)
 async def answer(request: AnswerRequest) -> AnswerResponse:
+    input_messages = [item.model_dump() for item in request.messages] if request.messages else None
+    if not input_messages and not request.question:
+        raise HTTPException(status_code=422, detail="question or messages is required")
     try:
-        result = await agent.run_grounded_answer(request.question, request.model)
+        result = await agent.run_grounded_answer(request.question, request.model, messages=input_messages)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:

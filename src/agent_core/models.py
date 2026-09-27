@@ -15,7 +15,8 @@ class ChatResponse(BaseModel):
     tool_calls: int
 
 class AnswerRequest(BaseModel):
-    question: str = Field(min_length=1, max_length=20_000)
+    question: str | None = Field(default=None, min_length=1, max_length=20_000)
+    messages: list[ChatMessage] | None = Field(default=None, min_length=1, max_length=100)
     model: str | None = None
 
 class Citation(BaseModel):

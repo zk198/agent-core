@@ -122,9 +122,18 @@ class Agent:
         )
         return result.content, result.iterations, result.tool_calls
 
-    async def run_grounded_answer(self, question: str, model: str | None = None) -> AgentResult:
+    async def run_grounded_answer(
+        self,
+        question: str | None = None,
+        model: str | None = None,
+        *,
+        messages: list[dict[str, Any]] | None = None,
+    ) -> AgentResult:
+        input_messages = messages or ([{"role": "user", "content": question}] if question else [])
+        if not input_messages:
+            raise ValueError("question or messages is required")
         return await self._run(
-            [{"role": "user", "content": question}],
+            input_messages,
             model,
             system_prompt=(
                 "You are a grounded knowledge assistant. Answer using only evidence returned "
@@ -135,7 +144,13 @@ class Agent:
             collect_citations=True,
         )
 
-    async def stream_grounded_answer(self, question: str, model: str | None = None):
+    async def stream_grounded_answer(
+        self,
+        question: str | None = None,
+        model: str | None = None,
+        *,
+        conversation_messages: list[dict[str, Any]] | None = None,
+    ):
         system_prompt = (
             "You are a grounded knowledge assistant. Answer using only evidence returned "
             "by the RAG tools. Cite factual claims with the supplied citation IDs such as [S1]. "
@@ -153,10 +168,12 @@ class Agent:
             }
             for tool in tools
         ]
-        messages: list[Any] = [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": question},
-        ]
+        input_messages: list[Any] = conversation_messages or (
+            [{"role": "user", "content": question}] if question else []
+        )
+        if not input_messages:
+            raise ValueError("question or messages is required")
+        messages: list[Any] = [{"role": "system", "content": system_prompt}, *input_messages]
         evidence: list[CitationEvidence] = []
         tool_calls_total = 0
 
