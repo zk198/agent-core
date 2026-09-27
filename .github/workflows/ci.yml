@@ -190,7 +190,7 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           repository: zk198/agent-tools-web
-          ref: main
+          ref: 1a1b5e3fc515cee907c74c8ac138c836ff4d1ce1
           path: agent-tools-web
       - name: Run e2e tools web
         env:
@@ -212,7 +212,7 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           repository: zk198/agent-tools-code
-          ref: main
+          ref: fabf95857712add010be116600bd47114c15210b
           path: agent-tools-code
       - name: Run e2e tools code
         env:
