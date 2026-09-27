@@ -8,8 +8,12 @@ from fastapi.responses import StreamingResponse
 from .agent import Agent
 from .config import Settings
 from .mcp_client import MCPRegistry
-from .models import (\n    AnswerRequest, AnswerResponse, ChatRequest, ChatResponse, Citation, ToolInfo,\n)
-from .observability import (\n    normalize_request_id, reset_request_id, set_request_id, start_trace,\n)
+from .models import (
+    AnswerRequest, AnswerResponse, ChatRequest, ChatResponse, Citation, ToolInfo,
+)
+from .observability import (
+    normalize_request_id, reset_request_id, set_request_id, start_trace,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("agent_core")
@@ -89,7 +93,9 @@ async def chat(request: ChatRequest) -> ChatResponse:
             raise HTTPException(status_code=422, detail="message or messages is required")
         content, iterations, tool_calls = await agent.run_messages(input_messages, request.model)
         trace.complete(status="completed")
-        return ChatResponse(\n            content=content, iterations=iterations, tool_calls=tool_calls, trace=trace.to_dict()\n        )
+        return ChatResponse(
+            content=content, iterations=iterations, tool_calls=tool_calls, trace=trace.to_dict()
+        )
     except ValueError as exc:
         trace.complete(status="failed", error={"type": type(exc).__name__, "message": str(exc)})
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -117,7 +123,10 @@ async def answer_stream(request: AnswerRequest) -> StreamingResponse:
                 request.question, request.model, conversation_messages=input_messages
             ):
                 if item["type"] == "delta":
-                    yield f"event: delta\ndata: {json.dumps({'content': item['content']}, ensure_ascii=False)}\n\n"
+                    yield f"event: delta
+data: {json.dumps({'content': item['content']}, ensure_ascii=False)}
+
+"
                 else:
                     trace.complete(status="completed")
                     citations = [
@@ -131,11 +140,20 @@ async def answer_stream(request: AnswerRequest) -> StreamingResponse:
                         "trace_id": trace.trace_id,
                         "trace": trace.to_dict(),
                     }, ensure_ascii=False)
-                    yield f"event: done\ndata: {payload}\n\n"
+                    yield f"event: done
+data: {payload}
+
+"
         except Exception as exc:
             trace.complete(status="failed", error={"type": type(exc).__name__, "message": str(exc)})
             logger.exception("grounded_answer_stream_failed")
-            payload = json.dumps(\n                {"detail": "grounded answer dependency failed", "trace_id": trace.trace_id}\n            )\n            yield f"event: error\\ndata: {payload}\\n\\n"
+            payload = json.dumps(
+                {"detail": "grounded answer dependency failed", "trace_id": trace.trace_id}
+            )
+            yield f"event: error\
+data: {payload}\
+\
+"
         finally:
             reset_trace(trace_token)
 
