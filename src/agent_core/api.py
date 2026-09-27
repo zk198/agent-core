@@ -29,11 +29,13 @@ async def request_logging(request: Request, call_next):
     try:
         response = await call_next(request)
     except Exception:
-        logger.exception("request_failed method=%s path=%s", request.method, request.url.path)
+        logger.exception("request_failed request_id=%s method=%s path=%s", request_value, request.method, request.url.path)
+        reset_request_id(token)
         raise
     logger.info(
         "request request_id=%s method=%s path=%s status=%s agent_ms=%.1f",
-        request_value,\n        request.method,
+        request_value,
+        request.method,
         request.url.path,
         response.status_code,
         (time.perf_counter() - started) * 1000,
