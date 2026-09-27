@@ -3,8 +3,8 @@ from agent_core.observability import ExecutionTrace
 
 def test_execution_trace_serializes_logs_metrics_and_ordered_events():
     trace = ExecutionTrace(trace_id="trace-1", request_id="req-1")
-    parent = trace.event(kind="llm", stage="llm", name="iteration.1", payload={"prompt": "hello"})
-    child = trace.event(kind="tool", stage="retrieval", name="rag.search_knowledge", parent_id=parent, payload={"arguments": {"query": "hello"}})
+    parent = trace.event(\n        kind="llm", stage="llm", name="iteration.1", payload={"prompt": "hello"}\n    )
+    child = trace.event(\n        kind="tool",\n        stage="retrieval",\n        name="rag.search_knowledge",\n        parent_id=parent,\n        payload={"arguments": {"query": "hello"}},\n    )
     trace.finish_event(child, payload={"result": {"chunk_id": "c1", "text": "evidence"}}, duration_ms=12.3)
     trace.finish_event(parent, payload={"response": {"content": "answer"}}, duration_ms=25.0)
     trace.log(level="INFO", message="completed")
