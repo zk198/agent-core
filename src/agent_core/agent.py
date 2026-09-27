@@ -223,7 +223,10 @@ class Agent:
                         if tool_call.function.arguments:
                             current["function"]["arguments"] += tool_call.function.arguments
 
-            logger.info("llm_stage request_id=%s llm_ms=%.1f iteration=%s streaming=true", request_id(), (time.perf_counter() - llm_started) * 1000, iteration)
+            logger.info(
+                "llm_stage request_id=%s llm_ms=%.1f iteration=%s streaming=true",
+                request_id(), (time.perf_counter() - llm_started) * 1000, iteration,
+            )
 
             if not tool_calls:
                 yield {
@@ -258,14 +261,13 @@ class Agent:
                 if not isinstance(args, dict):
                     raise RuntimeError(f"tool arguments for {function['name']} must be an object")
                 tool_started = time.perf_counter()
-                tool_started = time.perf_counter()
                 result = await self.registry.call(target.server, target.name, args)
                 tool_ms = (time.perf_counter() - tool_started) * 1000
                 stage = "retrieval" if target.server_name == "rag" else "tool"
-                logger.info("tool_stage request_id=%s stage=%s tool=%s tool_ms=%.1f", request_id(), stage, target.qualified_name, tool_ms)
-                tool_ms = (time.perf_counter() - tool_started) * 1000
-                stage = "retrieval" if target.server_name == "rag" else "tool"
-                logger.info("tool_stage request_id=%s stage=%s tool=%s tool_ms=%.1f", request_id(), stage, target.qualified_name, tool_ms)
+                logger.info(
+                    "tool_stage request_id=%s stage=%s tool=%s tool_ms=%.1f",
+                    request_id(), stage, target.qualified_name, tool_ms,
+                )
                 new_evidence: list[CitationEvidence] = []
                 for item in _extract_rag_evidence(result):
                     if item not in evidence:
@@ -334,7 +336,10 @@ class Agent:
                 messages=messages,
                 tools=cast(Any, openai_tools or None),
             )
-            logger.info("llm_stage request_id=%s stage=llm llm_ms=%.1f iteration=%s streaming=false", request_id(), (time.perf_counter() - llm_started) * 1000, iteration)
+            logger.info(
+                "llm_stage request_id=%s stage=llm llm_ms=%.1f iteration=%s streaming=false",
+                request_id(), (time.perf_counter() - llm_started) * 1000, iteration,
+            )
             if not response.choices:
                 raise RuntimeError("model returned no choices")
 
