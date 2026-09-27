@@ -112,6 +112,7 @@ gateway_stream() {
   $compose logs --no-color ai-gateway agent-core > "$log_dir/observability.log"
   grep -q "request_id=phase1c-e2e-request" "$log_dir/observability.log"
   grep -q "gateway_request" "$log_dir/observability.log"
+  grep -q "gateway_stream_stage" "$log_dir/observability.log"
   grep -q "agent_ms=" "$log_dir/observability.log"
   grep -Eq "stage=retrieval|stage=tool" "$log_dir/observability.log"
   grep -q "stage=llm" "$log_dir/observability.log"
