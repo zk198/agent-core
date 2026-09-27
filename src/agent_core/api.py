@@ -9,7 +9,7 @@ from .agent import Agent
 from .config import Settings
 from .mcp_client import MCPRegistry
 from .models import AnswerRequest, AnswerResponse, ChatRequest, ChatResponse, Citation, ToolInfo
-from .observability import normalize_request_id, reset_request_id, set_request_id
+from .observability import current_trace, normalize_request_id, reset_request_id, set_request_id, start_trace
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("agent_core")
