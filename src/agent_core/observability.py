@@ -3,7 +3,7 @@ from __future__ import annotations
 import time
 import uuid
 from contextvars import ContextVar
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 _request_id: ContextVar[str | None] = ContextVar("agent_request_id", default=None)
@@ -39,7 +39,7 @@ class ExecutionTrace:
     def __init__(self, *, trace_id: str | None = None, request_id_value: str | None = None) -> None:
         self.trace_id = trace_id or uuid.uuid4().hex
         self.request_id = request_id_value or request_id()
-        self.started_at = datetime.now(timezone.utc).isoformat()
+        self.started_at = datetime.now(UTC).isoformat()
         self._started = time.perf_counter()
         self.completed_at: str | None = None
         self.status = "running"
