@@ -8,8 +8,8 @@ from fastapi.responses import StreamingResponse
 from .agent import Agent
 from .config import Settings
 from .mcp_client import MCPRegistry
-from .models import AnswerRequest, AnswerResponse, ChatRequest, ChatResponse, Citation, ToolInfo
-from .observability import current_trace, normalize_request_id, reset_request_id, set_request_id, start_trace
+from .models import (\n    AnswerRequest, AnswerResponse, ChatRequest, ChatResponse, Citation, ToolInfo,\n)
+from .observability import (\n    normalize_request_id, reset_request_id, set_request_id, start_trace,\n)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("agent_core")
@@ -89,7 +89,7 @@ async def chat(request: ChatRequest) -> ChatResponse:
             raise HTTPException(status_code=422, detail="message or messages is required")
         content, iterations, tool_calls = await agent.run_messages(input_messages, request.model)
         trace.complete(status="completed")
-        return ChatResponse(content=content, iterations=iterations, tool_calls=tool_calls, trace=trace.to_dict())
+        return ChatResponse(\n            content=content, iterations=iterations, tool_calls=tool_calls, trace=trace.to_dict()\n        )
     except ValueError as exc:
         trace.complete(status="failed", error={"type": type(exc).__name__, "message": str(exc)})
         raise HTTPException(status_code=400, detail=str(exc)) from exc
