@@ -99,6 +99,7 @@ gateway_stream() {
   curl -fsS --max-time 60 \
     -X POST \
     -H "Content-Type: application/json" \
+    -H "X-Request-ID: phase1c-e2e-request" \
     -H "Authorization: Bearer $RAG_E2E_TOKEN" \
     -d '{"question":"Find the RAG E2E marker."}' \
     http://localhost:18001/api/v1/answer/stream | tee "$log_dir/gateway-answer-stream.txt"
@@ -108,6 +109,13 @@ gateway_stream() {
   grep -q '"citations"' "$log_dir/gateway-answer-stream.txt"
   grep -q '"conversation_id"' "$log_dir/gateway-answer-stream.txt"
   log "gateway grounded answer stream passed"
+  $compose logs --no-color ai-gateway agent-core > "$log_dir/observability.log"
+  grep -q "request_id=phase1c-e2e-request" "$log_dir/observability.log"
+  grep -q "gateway_request" "$log_dir/observability.log"
+  grep -q "agent_ms=" "$log_dir/observability.log"
+  grep -Eq "stage=retrieval|stage=tool" "$log_dir/observability.log"
+  grep -q "stage=llm" "$log_dir/observability.log"
+  log "observability acceptance passed"
 }
 
 discover() {
