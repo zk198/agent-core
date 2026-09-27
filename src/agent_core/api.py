@@ -9,6 +9,7 @@ from .agent import Agent
 from .config import Settings
 from .mcp_client import MCPRegistry
 from .models import AnswerRequest, AnswerResponse, ChatRequest, ChatResponse, Citation, ToolInfo
+from .observability import normalize_request_id, request_id, reset_request_id, set_request_id
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("agent_core")
@@ -22,6 +23,8 @@ app = FastAPI(title="Agent Core", version="0.3.0")
 
 @app.middleware("http")
 async def request_logging(request: Request, call_next):
+    request_value = normalize_request_id(request.headers.get("X-Request-ID"))
+    token = set_request_id(request_value)
     started = time.perf_counter()
     try:
         response = await call_next(request)
@@ -29,12 +32,14 @@ async def request_logging(request: Request, call_next):
         logger.exception("request_failed method=%s path=%s", request.method, request.url.path)
         raise
     logger.info(
-        "request method=%s path=%s status=%s duration_ms=%.1f",
-        request.method,
+        "request request_id=%s method=%s path=%s status=%s agent_ms=%.1f",
+        request_value,\n        request.method,
         request.url.path,
         response.status_code,
         (time.perf_counter() - started) * 1000,
     )
+    response.headers["X-Request-ID"] = request_value
+    reset_request_id(token)
     return response
 
 
