@@ -135,7 +135,7 @@ async def answer_stream(request: AnswerRequest) -> StreamingResponse:
         except Exception as exc:
             trace.complete(status="failed", error={"type": type(exc).__name__, "message": str(exc)})
             logger.exception("grounded_answer_stream_failed")
-            yield f"event: error\ndata: {json.dumps({'detail': 'grounded answer dependency failed', 'trace_id': trace.trace_id})}\n\n"
+            payload = json.dumps(\n                {"detail": "grounded answer dependency failed", "trace_id": trace.trace_id}\n            )\n            yield f"event: error\\ndata: {payload}\\n\\n"
         finally:
             reset_trace(trace_token)
 
