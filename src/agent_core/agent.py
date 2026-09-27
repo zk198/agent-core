@@ -189,9 +189,21 @@ class Agent:
         messages: list[Any] = [{"role": "system", "content": system_prompt}, *input_messages]
         evidence: list[CitationEvidence] = []
         tool_calls_total = 0
+        trace = current_trace()
+        if trace:
+            trace.event(
+                kind="agent", stage="agent", name="agent.stream_grounded_answer",
+                payload={"input_messages": input_messages, "model": model or self.settings.model_name, "system_prompt": system_prompt},
+            )
 
         for iteration in range(1, self.settings.max_iterations + 1):
             llm_started = time.perf_counter()
+            llm_event = None
+            if trace:
+                llm_event = trace.event(
+                    kind="llm", stage="llm", name=f"iteration.{iteration}",
+                    payload={"model": model or self.settings.model_name, "messages": messages, "tools": openai_tools},
+                )
             stream = await self.client.chat.completions.create(
                 model=model or self.settings.model_name,
                 messages=messages,
@@ -223,10 +235,16 @@ class Agent:
                         if tool_call.function.arguments:
                             current["function"]["arguments"] += tool_call.function.arguments
 
+            llm_ms = (time.perf_counter() - llm_started) * 1000
             logger.info(
                 "llm_stage request_id=%s llm_ms=%.1f iteration=%s streaming=true",
-                request_id(), (time.perf_counter() - llm_started) * 1000, iteration,
+                request_id(), llm_ms, iteration,
             )
+            if trace and llm_event:
+                trace.finish_event(
+                    llm_event, duration_ms=round(llm_ms, 1),
+                    payload={"response": {"content": "".join(content_parts), "tool_calls": list(tool_calls.values())}},
+                )
 
             if not tool_calls:
                 yield {
@@ -235,6 +253,8 @@ class Agent:
                     "iterations": iteration,
                     "tool_calls": tool_calls_total,
                 }
+                if trace:
+                    trace.complete(status="completed")
                 return
 
             assistant_tool_calls = [tool_calls[index] for index in sorted(tool_calls)]
@@ -261,8 +281,33 @@ class Agent:
                 if not isinstance(args, dict):
                     raise RuntimeError(f"tool arguments for {function['name']} must be an object")
                 tool_started = time.perf_counter()
-                result = await self.registry.call(target.server, target.name, args)
+                tool_event = None
+                if trace:
+                    tool_event = trace.event(
+                        kind="tool",
+                        stage="retrieval" if target.server_name == "rag" else "tool",
+                        name=target.qualified_name,
+                        payload={"server": target.server_name, "tool": target.name, "arguments": args},
+                        parent_id=llm_event,
+                    )
+                try:
+                    result = await self.registry.call(target.server, target.name, args)
+                except Exception as exc:
+                    if trace and tool_event:
+                        trace.finish_event(
+                            tool_event,
+                            status="failed",
+                            duration_ms=round((time.perf_counter() - tool_started) * 1000, 1),
+                            payload={"error": {"type": type(exc).__name__, "message": str(exc)}},
+                        )
+                        trace.complete(status="failed", error={"type": type(exc).__name__, "message": str(exc)})
+                    raise
                 tool_ms = (time.perf_counter() - tool_started) * 1000
+                if trace and tool_event:
+                    trace.finish_event(
+                        tool_event, duration_ms=round(tool_ms, 1),
+                        payload={"result": _structured_value(result)},
+                    )
                 stage = "retrieval" if target.server_name == "rag" else "tool"
                 logger.info(
                     "tool_stage request_id=%s stage=%s tool=%s tool_ms=%.1f",
@@ -303,7 +348,16 @@ class Agent:
     ) -> AgentResult:
         trace = current_trace()
         if trace:
-            trace.event(kind="agent", stage="agent", name="agent.run", payload={"input_messages": input_messages, "model": model or self.settings.model_name, "system_prompt": system_prompt, "allowed_server_names": sorted(allowed_server_names) if allowed_server_names else None}, status="running")
+            trace.event(
+                kind="agent", stage="agent", name="agent.run",
+                payload={
+                    "input_messages": input_messages,
+                    "model": model or self.settings.model_name,
+                    "system_prompt": system_prompt,
+                    "allowed_server_names": sorted(allowed_server_names) if allowed_server_names else None,
+                },
+                status="running",
+            )
         tools = await self.registry.list_tools()
         if allowed_server_names is not None:
             tools = [tool for tool in tools if tool.server_name in allowed_server_names]
@@ -336,7 +390,12 @@ class Agent:
                 tool_calls_total,
             )
             llm_started = time.perf_counter()
-            llm_event = trace.event(kind="llm", stage="llm", name=f"iteration.{iteration}", payload={"model": model or self.settings.model_name, "messages": messages, "tools": openai_tools}, parent_id=None) if trace else None
+            llm_event = None
+            if trace:
+                llm_event = trace.event(
+                    kind="llm", stage="llm", name=f"iteration.{iteration}",
+                    payload={"model": model or self.settings.model_name, "messages": messages, "tools": openai_tools},
+                )
             response = await self.client.chat.completions.create(
                 model=model or self.settings.model_name,
                 messages=messages,
@@ -348,7 +407,10 @@ class Agent:
                 request_id(), llm_ms, iteration,
             )
             if trace and llm_event:
-                trace.finish_event(llm_event, duration_ms=round(llm_ms, 1), payload={"response": response.model_dump(exclude_none=True)})
+                trace.finish_event(
+                    llm_event, duration_ms=round(llm_ms, 1),
+                    payload={"response": response.model_dump(exclude_none=True)},
+                )
             if not response.choices:
                 raise RuntimeError("model returned no choices")
 
@@ -394,17 +456,33 @@ class Agent:
                     target.name,
                 )
                 tool_started = time.perf_counter()
-                tool_event = trace.event(kind="tool", stage="retrieval" if target.server_name == "rag" else "tool", name=target.qualified_name, payload={"server": target.server_name, "tool": target.name, "arguments": args}, parent_id=llm_event) if trace else None
+                tool_event = None
+                if trace:
+                    tool_event = trace.event(
+                        kind="tool",
+                        stage="retrieval" if target.server_name == "rag" else "tool",
+                        name=target.qualified_name,
+                        payload={"server": target.server_name, "tool": target.name, "arguments": args},
+                        parent_id=llm_event,
+                    )
                 try:
                     result = await self.registry.call(target.server, target.name, args)
                 except Exception as exc:
                     if trace and tool_event:
-                        trace.finish_event(tool_event, status="failed", duration_ms=round((time.perf_counter() - tool_started) * 1000, 1), payload={"error": {"type": type(exc).__name__, "message": str(exc)}})
+                        trace.finish_event(
+                            tool_event,
+                            status="failed",
+                            duration_ms=round((time.perf_counter() - tool_started) * 1000, 1),
+                            payload={"error": {"type": type(exc).__name__, "message": str(exc)}},
+                        )
                         trace.complete(status="failed", error={"type": type(exc).__name__, "message": str(exc)})
                     raise
                 tool_ms = (time.perf_counter() - tool_started) * 1000
                 if trace and tool_event:
-                    trace.finish_event(tool_event, duration_ms=round(tool_ms, 1), payload={"result": _structured_value(result)})
+                    trace.finish_event(
+                        tool_event, duration_ms=round(tool_ms, 1),
+                        payload={"result": _structured_value(result)},
+                    )
                 new_evidence: list[CitationEvidence] = []
                 if collect_citations and target.server_name == "rag":
                     for item in _extract_rag_evidence(result):
