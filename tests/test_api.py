@@ -91,7 +91,7 @@ def test_grounded_answer_stream_contract(monkeypatch):
     import agent_core.api as api
     from agent_core.agent import CitationEvidence
 
-    async def fake_stream(question=None, model=None, *, messages=None):
+    async def fake_stream(question=None, model=None, *, conversation_messages=None):
         yield {"type": "delta", "content": "Hello "}
         yield {"type": "delta", "content": "world."}
         yield {
