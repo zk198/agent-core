@@ -80,6 +80,13 @@ def _extract_rag_evidence(value: Any) -> list[CitationEvidence]:
         elif isinstance(node, list):
             for item in node:
                 visit(item)
+        elif isinstance(node, str):
+            try:
+                decoded = json.loads(node)
+            except json.JSONDecodeError:
+                return
+            if decoded != node:
+                visit(decoded)
 
     visit(structured)
     return evidence
