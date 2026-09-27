@@ -96,7 +96,9 @@ async def answer_stream(request: AnswerRequest) -> StreamingResponse:
 
     async def events():
         try:
-            async for item in agent.stream_grounded_answer(request.question, request.model, conversation_messages=input_messages):
+            async for item in agent.stream_grounded_answer(
+                request.question, request.model, conversation_messages=input_messages
+            ):
                 if item["type"] == "delta":
                     yield f"event: delta\ndata: {json.dumps({'content': item['content']}, ensure_ascii=False)}\n\n"
                 else:
