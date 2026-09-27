@@ -63,21 +63,32 @@ def _extract_rag_evidence(value: Any) -> list[CitationEvidence]:
             structured = json.loads(structured)
         except json.JSONDecodeError:
             return []
-    if isinstance(structured, dict):
-        candidates = structured.get("results", structured.get("data", []))
-    else:
-        candidates = structured
-    if not isinstance(candidates, list):
-        return []
     evidence: list[CitationEvidence] = []
-    for item in candidates:
-        if not isinstance(item, dict):
-            continue
-        chunk_id = item.get("chunk_id")
-        text = item.get("text")
-        source_name = item.get("source_name")
-        if isinstance(chunk_id, str) and isinstance(text, str) and isinstance(source_name, str):
-            evidence.append(CitationEvidence(chunk_id=chunk_id, source_name=source_name, text=text))
+
+    def visit(node: Any) -> None:
+        if isinstance(node, dict):
+            chunk_id = node.get("chunk_id")
+            text = node.get("text")
+            source_name = node.get("source_name")
+            if isinstance(chunk_id, str) and isinstance(text, str) and isinstance(source_name, str):
+                item = CitationEvidence(chunk_id=chunk_id, source_name=source_name, text=text)
+                if item not in evidence:
+                    evidence.append(item)
+                return
+            for value in node.values():
+                visit(value)
+        elif isinstance(node, list):
+            for item in node:
+                visit(item)
+        elif isinstance(node, str):
+            try:
+                decoded = json.loads(node)
+            except json.JSONDecodeError:
+                return
+            if decoded != node:
+                visit(decoded)
+
+    visit(structured)
     return evidence
 
 

@@ -94,6 +94,22 @@ gateway_chat() {
   log "gateway session E2E passed"
 }
 
+gateway_stream() {
+  log "calling grounded answer stream through ai-gateway"
+  curl -fsS --max-time 60 \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer $RAG_E2E_TOKEN" \
+    -d '{"question":"Find the RAG E2E marker."}' \
+    http://localhost:18001/api/v1/answer/stream | tee "$log_dir/gateway-answer-stream.txt"
+  grep -q 'event: delta' "$log_dir/gateway-answer-stream.txt"
+  grep -q 'event: done' "$log_dir/gateway-answer-stream.txt"
+  grep -q 'RAG_E2E_STREAM_OK' "$log_dir/gateway-answer-stream.txt"
+  grep -q '"citations"' "$log_dir/gateway-answer-stream.txt"
+  grep -q '"conversation_id"' "$log_dir/gateway-answer-stream.txt"
+  log "gateway grounded answer stream passed"
+}
+
 discover() {
   log "discovering MCP tools through agent-core"
   curl -fsS --max-time 30 http://localhost:18000/api/v1/tools | tee "$log_dir/tools.json"
@@ -139,6 +155,7 @@ case "${1:-all}" in
   discover) discover ;;
   chat) chat ;;
   gateway-chat) gateway_chat ;;
+  gateway-stream) gateway_stream ;;
   stream) stream ;;
   cleanup) cleanup ;;
   all)
@@ -149,7 +166,7 @@ case "${1:-all}" in
     chat
     ;;
   *)
-    echo "usage: $0 [build|start-mocks|start-gateway|start-agent|start|wait-agent|wait-gateway|discover|chat|gateway-chat|stream|cleanup|all]" >&2
+    echo "usage: $0 [build|start-mocks|start-gateway|start-agent|start|wait-agent|wait-gateway|discover|chat|gateway-chat|gateway-stream|stream|cleanup|all]" >&2
     exit 2
     ;;
 esac
