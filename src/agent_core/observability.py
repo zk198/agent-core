@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 _request_id: ContextVar[str | None] = ContextVar("agent_request_id", default=None)
-_trace: ContextVar["ExecutionTrace | None"] = ContextVar("agent_execution_trace", default=None)
+_trace: ContextVar[ExecutionTrace | None] = ContextVar("agent_execution_trace", default=None)
 
 
 def set_request_id(value: str):
@@ -69,13 +69,13 @@ class ExecutionTrace:
             "stage": stage,
             "name": name,
             "status": status,
-            "started_at": datetime.now(timezone.utc).isoformat(),
+            "started_at": datetime.now(UTC).isoformat(),
             "duration_ms": None,
             "payload": payload or {},
         })
         return event_id
 
-    def finish_event(self, event_id: str, *, status: str = "completed", payload: dict[str, Any] | None = None, duration_ms: float | None = None) -> None:
+    def finish_event(\n        self,\n        event_id: str,\n        *,\n        status: str = "completed",\n        payload: dict[str, Any] | None = None,\n        duration_ms: float | None = None,\n    ) -> None:
         for item in self.events:
             if item["event_id"] == event_id:
                 item["status"] = status
