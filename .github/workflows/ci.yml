@@ -143,6 +143,12 @@ jobs:
           repository: zk198/rag-retrieval
           ref: main
           path: rag-retrieval
+      - name: Checkout ai-ui
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          repository: zk198/ai-ui
+          ref: main
+          path: ai-ui
       - name: Checkout ai-gateway
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
@@ -169,6 +175,7 @@ jobs:
           mv "$GITHUB_WORKSPACE/rag-ingestion" "$GITHUB_WORKSPACE/../rag-ingestion"
           mv "$GITHUB_WORKSPACE/rag-indexer" "$GITHUB_WORKSPACE/../rag-indexer"
           mv "$GITHUB_WORKSPACE/rag-retrieval" "$GITHUB_WORKSPACE/../rag-retrieval"
+          mv "$GITHUB_WORKSPACE/ai-ui" "$GITHUB_WORKSPACE/../ai-ui"
           mv "$GITHUB_WORKSPACE/ai-gateway" "$GITHUB_WORKSPACE/../ai-gateway"
           mv "$GITHUB_WORKSPACE/agent-tools-web" "$GITHUB_WORKSPACE/../agent-tools-web"
           mv "$GITHUB_WORKSPACE/agent-tools-code" "$GITHUB_WORKSPACE/../agent-tools-code"
