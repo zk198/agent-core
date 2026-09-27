@@ -87,4 +87,4 @@ assert "WEB_E2E_OK" in r.text
 
 echo "e2e tools web passed"
 
-# rerun after MCP ASGI deployment fix
+# rerun after explicit stateless Streamable HTTP MCP fix
