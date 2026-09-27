@@ -68,7 +68,7 @@ def test_grounded_answer_contract(monkeypatch):
     import agent_core.api as api
     from agent_core.agent import AgentResult, CitationEvidence
 
-    async def fake_answer(question, model=None):
+    async def fake_answer(question=None, model=None, *, messages=None):
         return AgentResult(
             content="The answer is supported [S1].",
             iterations=2,
@@ -91,7 +91,7 @@ def test_grounded_answer_stream_contract(monkeypatch):
     import agent_core.api as api
     from agent_core.agent import CitationEvidence
 
-    async def fake_stream(question, model=None):
+    async def fake_stream(question=None, model=None, *, messages=None):
         yield {"type": "delta", "content": "Hello "}
         yield {"type": "delta", "content": "world."}
         yield {
@@ -138,3 +138,28 @@ def test_chat_accepts_message_history(monkeypatch):
 def test_chat_requires_message_or_messages():
     response = TestClient(app).post("/api/v1/chat", json={})
     assert response.status_code == 422
+
+
+def test_grounded_answer_accepts_message_history(monkeypatch):
+    import agent_core.api as api
+    from agent_core.agent import AgentResult
+
+    async def fake_answer(question=None, model=None, *, messages=None):
+        assert messages == [
+            {"role": "user", "content": "first"},
+            {"role": "assistant", "content": "previous"},
+            {"role": "user", "content": "second"},
+        ]
+        return AgentResult(content="grounded", iterations=1, tool_calls=1)
+
+    monkeypatch.setattr(api.agent, "run_grounded_answer", fake_answer)
+    response = TestClient(app).post(
+        "/api/v1/answer",
+        json={"messages": [
+            {"role": "user", "content": "first"},
+            {"role": "assistant", "content": "previous"},
+            {"role": "user", "content": "second"},
+        ]},
+    )
+    assert response.status_code == 200
+    assert response.json()["answer"] == "grounded"
