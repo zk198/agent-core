@@ -123,25 +123,25 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           repository: zk198/rag-infra
-          ref: phase-1c-chat-contract-ui
+          ref: main
           path: rag-infra
       - name: Checkout rag-ingestion
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           repository: zk198/rag-ingestion
-          ref: phase-1c-chat-contract-ui
+          ref: main
           path: rag-ingestion
       - name: Checkout rag-indexer
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           repository: zk198/rag-indexer
-          ref: phase-1c-chat-contract-ui
+          ref: main
           path: rag-indexer
       - name: Checkout rag-retrieval
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           repository: zk198/rag-retrieval
-          ref: phase-1c-chat-contract-ui
+          ref: main
           path: rag-retrieval
       - name: Checkout ai-gateway
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
