@@ -36,7 +36,7 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           repository: zk198/ai-gateway
-          ref: main
+          ref: phase-1c-chat-contract-ui
           path: ai-gateway
 
       - name: Build AI gateway image
@@ -95,6 +95,10 @@ jobs:
         env:
           RAG_JWT_SECRET: e2e-ci-only-secret
         run: sh ./e2e/run-fast.sh stream
+      - name: Run gateway grounded answer stream
+        env:
+          RAG_JWT_SECRET: e2e-ci-only-secret
+        run: sh ./e2e/run-fast.sh gateway-stream
 
       - name: Cleanup fast E2E services
         if: ${{ always() }}
@@ -119,31 +123,31 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           repository: zk198/rag-infra
-          ref: main
+          ref: phase-1c-chat-contract-ui
           path: rag-infra
       - name: Checkout rag-ingestion
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           repository: zk198/rag-ingestion
-          ref: main
+          ref: phase-1c-chat-contract-ui
           path: rag-ingestion
       - name: Checkout rag-indexer
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           repository: zk198/rag-indexer
-          ref: main
+          ref: phase-1c-chat-contract-ui
           path: rag-indexer
       - name: Checkout rag-retrieval
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           repository: zk198/rag-retrieval
-          ref: main
+          ref: phase-1c-chat-contract-ui
           path: rag-retrieval
       - name: Checkout ai-gateway
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           repository: zk198/ai-gateway
-          ref: main
+          ref: phase-1c-chat-contract-ui
           path: ai-gateway
 
 
