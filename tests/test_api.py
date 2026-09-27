@@ -163,3 +163,9 @@ def test_grounded_answer_accepts_message_history(monkeypatch):
     )
     assert response.status_code == 200
     assert response.json()["answer"] == "grounded"
+
+
+def test_request_id_is_returned():
+    response = TestClient(app).get("/api/v1/health", headers={"X-Request-ID": "phase1c-test-id"})
+    assert response.status_code == 200
+    assert response.headers["X-Request-ID"] == "phase1c-test-id"
