@@ -36,7 +36,7 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           repository: zk198/ai-gateway
-          ref: fix/standardize-health-endpoint
+          ref: main
           path: ai-gateway
 
       - name: Build AI gateway image
@@ -143,7 +143,7 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           repository: zk198/ai-gateway
-          ref: fix/standardize-health-endpoint
+          ref: main
           path: ai-gateway
 
 
