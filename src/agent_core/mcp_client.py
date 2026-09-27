@@ -49,7 +49,9 @@ class MCPRegistry:
             raise ValueError("MCP server names must be unique")
 
     def _client(self, server: MCPServer) -> Client:
-        headers = {"X-Request-ID": request_id()} if request_id() else {}
+        headers: dict[str, str] = {}
+        if value := request_id():
+            headers["X-Request-ID"] = value
         if server.auth_token:
             headers["Authorization"] = f"Bearer {server.auth_token}"
         transport = StreamableHttpTransport(server.url, headers=headers)
