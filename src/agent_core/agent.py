@@ -149,7 +149,7 @@ class Agent:
         question: str | None = None,
         model: str | None = None,
         *,
-        messages: list[dict[str, Any]] | None = None,
+        conversation_messages: list[dict[str, Any]] | None = None,
     ):
         system_prompt = (
             "You are a grounded knowledge assistant. Answer using only evidence returned "
@@ -168,7 +168,7 @@ class Agent:
             }
             for tool in tools
         ]
-        input_messages = messages or ([{"role": "user", "content": question}] if question else [])
+        input_messages: list[Any] = conversation_messages or ([{"role": "user", "content": question}] if question else [])
         if not input_messages:
             raise ValueError("question or messages is required")
         messages: list[Any] = [{"role": "system", "content": system_prompt}, *input_messages]
