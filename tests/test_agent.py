@@ -218,3 +218,35 @@ async def test_grounded_answer_injects_citation_instructions():
     agent.client = GroundedClient()
     result = await agent.run_grounded_answer("Question")
     assert result.content == "done"
+
+
+@pytest.mark.asyncio
+async def test_grounded_answer_extracts_nested_mcp_result_citations():
+    class NestedRagRegistry(RagRegistry):
+        async def call(self, server, name, arguments):
+            return {
+                "content": [{"type": "text", "text": json.dumps([{
+                    "chunk_id": "nested-1",
+                    "source_name": "mailbox",
+                    "text": "Nested evidence",
+                }])}],
+            }
+
+    class GroundedClient(FakeClient):
+        def __init__(self):
+            super().__init__()
+            self.chat.completions = self
+
+        async def create(self, **kwargs):
+            if len([m for m in kwargs["messages"] if m.get("role") == "tool"]) == 0:
+                class RagToolMessage(FakeMessage):
+                    tool_calls = [RagCall()]
+                    content = None
+                return FakeResponse(RagToolMessage())
+            return FakeResponse(FakeMessage())
+
+    agent = Agent(Settings(max_iterations=3), NestedRagRegistry())
+    agent.client = GroundedClient()
+    result = await agent.run_grounded_answer("What is the evidence?")
+    assert result.citations[0].chunk_id == "nested-1"
+    assert result.citations[0].source_name == "mailbox"
