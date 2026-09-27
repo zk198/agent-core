@@ -36,7 +36,7 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           repository: zk198/ai-gateway
-          ref: phase-1c-chat-contract-ui
+          ref: main
           path: ai-gateway
 
       - name: Build AI gateway image
@@ -119,12 +119,12 @@ jobs:
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
 
-      - name: Checkout rag-infra
+      - name: Checkout ai-infra
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
-          repository: zk198/rag-infra
+          repository: zk198/ai-infra
           ref: main
-          path: rag-infra
+          path: ai-infra
       - name: Checkout rag-ingestion
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
@@ -165,7 +165,7 @@ jobs:
           path: agent-tools-code
       - name: Arrange e2e tools rag Compose siblings
         run: |
-          mv "$GITHUB_WORKSPACE/rag-infra" "$GITHUB_WORKSPACE/../rag-infra"
+          mv $GITHUB_WORKSPACE/../ai-infra "$GITHUB_WORKSPACE/../rag-infra"
           mv "$GITHUB_WORKSPACE/rag-ingestion" "$GITHUB_WORKSPACE/../rag-ingestion"
           mv "$GITHUB_WORKSPACE/rag-indexer" "$GITHUB_WORKSPACE/../rag-indexer"
           mv "$GITHUB_WORKSPACE/rag-retrieval" "$GITHUB_WORKSPACE/../rag-retrieval"
