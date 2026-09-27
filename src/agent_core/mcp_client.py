@@ -5,6 +5,8 @@ from typing import Any
 from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
 
+from .observability import request_id
+
 
 @dataclass(frozen=True)
 class MCPServer:
@@ -47,11 +49,9 @@ class MCPRegistry:
             raise ValueError("MCP server names must be unique")
 
     def _client(self, server: MCPServer) -> Client:
-        headers = (
-            {"Authorization": f"Bearer {server.auth_token}"}
-            if server.auth_token
-            else None
-        )
+        headers = {"X-Request-ID": request_id()} if request_id() else {}
+        if server.auth_token:
+            headers["Authorization"] = f"Bearer {server.auth_token}"
         transport = StreamableHttpTransport(server.url, headers=headers)
         return Client(transport)
 
