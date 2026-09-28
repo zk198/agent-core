@@ -10,6 +10,11 @@ def choose_tool(request: dict) -> tuple[str, dict, str]:
         for item in request.get("tools", [])
         if isinstance(item, dict)
     }
+    invalid_args = any(
+        "RAG_E2E_INVALID_ARGS" in str(message.get("content", ""))
+        for message in request.get("messages", [])
+        if isinstance(message, dict) and message.get("role") == "user"
+    )
     if "web__web_search" in names:
         return (
             "web__web_search",
@@ -24,7 +29,10 @@ def choose_tool(request: dict) -> tuple[str, dict, str]:
         )
     return (
         "rag__search_knowledge",
-        {"query": "RAG_E2E_MARKER", "limit": 3},
+        {
+            "query": "RAG_E2E_MARKER",
+            "limit": "invalid" if invalid_args else 3,
+        },
         "RAG_E2E_OK: indexed marker through MCP.",
     )
 
