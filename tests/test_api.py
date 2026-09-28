@@ -257,3 +257,5 @@ def test_grounded_answer_stream_maps_tool_validation_failure_to_error_event(monk
     payload = json.loads(frames[1].split("data: ", 1)[1])
     assert payload["detail"] == "grounded answer dependency failed"
     assert payload["trace_id"]
+    assert payload["trace"]["trace_id"] == payload["trace_id"]
+    assert payload["trace"]["status"] == "failed"
