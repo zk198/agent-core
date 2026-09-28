@@ -192,3 +192,12 @@ def test_validate_tool_arguments_rejects_schema_mismatch():
     )()
     with pytest.raises(MCPToolArgumentError, match="text"):
         validate_tool_arguments(tool, {"text": 123})
+
+
+@pytest.mark.asyncio
+async def test_call_rejects_unknown_server_with_typed_error():
+    from agent_core.mcp_client import MCPServerError
+
+    registry = MCPRegistry([MCPServer("test://known", name="web")])
+    with pytest.raises(MCPServerError, match="unknown MCP server"):
+        await registry.call("test://missing", "echo", {})

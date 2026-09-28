@@ -18,6 +18,18 @@ class MCPToolArgumentError(RuntimeError):
     """Model-generated tool arguments failed the MCP input schema."""
 
 
+class MCPToolArgumentsJSONError(RuntimeError):
+    """Model-generated tool arguments were not valid JSON."""
+
+
+class MCPToolResolutionError(RuntimeError):
+    """The model referenced an unknown model-facing MCP tool."""
+
+
+class MCPServerError(RuntimeError):
+    """The agent referenced an unknown MCP server."""
+
+
 def validate_tool_arguments(tool: "MCPTool", arguments: dict[str, Any]) -> None:
     try:
         validate(instance=arguments, schema=tool.input_schema)
@@ -100,7 +112,7 @@ class MCPRegistry:
     async def call(self, server: str, name: str, arguments: dict[str, Any]) -> Any:
         target = next((item for item in self.servers if item.url == server), None)
         if target is None:
-            raise RuntimeError(f"unknown MCP server: {server}")
+            raise MCPServerError(f"unknown MCP server: {server}")
         async with self._client(target) as client:
             result = await client.call_tool(name, arguments)
         if getattr(result, "is_error", False):

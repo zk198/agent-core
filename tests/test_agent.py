@@ -110,7 +110,9 @@ async def test_agent_rejects_malformed_tool_arguments():
 
     agent = Agent(Settings(max_iterations=3), FakeRegistry())
     agent.client = BadArgs()
-    with pytest.raises(RuntimeError, match="invalid arguments"):
+    from agent_core.mcp_client import MCPToolArgumentsJSONError
+
+    with pytest.raises(MCPToolArgumentsJSONError, match="invalid JSON arguments"):
         await agent.run("hello")
 
 
