@@ -8,7 +8,7 @@ from openai import AsyncOpenAI
 
 from .config import Settings
 from .context import ContextBudget
-from .mcp_client import MCPRegistry
+from .mcp_client import MCPRegistry, MCPToolArgumentError, validate_tool_arguments
 from .observability import current_trace, request_id
 
 logger = logging.getLogger(__name__)
@@ -287,7 +287,28 @@ class Agent:
                 except json.JSONDecodeError as exc:
                     raise RuntimeError(f"invalid arguments for tool {function['name']}") from exc
                 if not isinstance(args, dict):
-                    raise RuntimeError(f"tool arguments for {function['name']} must be an object")
+                    error = RuntimeError(f"tool arguments for {function['name']} must be an object")
+                    if trace:
+                        failed_event = trace.event(
+                            kind="tool", stage="retrieval" if target.server_name == "rag" else "tool",
+                            name=target.qualified_name,
+                            payload={"server": target.server_name, "tool": target.name}, parent_id=llm_event,
+                        )
+                        trace.finish_event(failed_event, status="failed", payload={"error": {"type": type(error).__name__, "message": str(error)}})
+                        trace.complete(status="failed", error={"type": type(error).__name__, "message": str(error)})
+                    raise error
+                try:
+                    validate_tool_arguments(target, args)
+                except MCPToolArgumentError as exc:
+                    if trace:
+                        failed_event = trace.event(
+                            kind="tool", stage="retrieval" if target.server_name == "rag" else "tool",
+                            name=target.qualified_name,
+                            payload={"server": target.server_name, "tool": target.name, "arguments": args}, parent_id=llm_event,
+                        )
+                        trace.finish_event(failed_event, status="failed", payload={"error": {"type": type(exc).__name__, "message": str(exc)}})
+                        trace.complete(status="failed", error={"type": type(exc).__name__, "message": str(exc)})
+                    raise
                 tool_started = time.perf_counter()
                 tool_event = None
                 if trace:
@@ -465,7 +486,28 @@ class Agent:
                 except json.JSONDecodeError as exc:
                     raise RuntimeError(f"invalid arguments for tool {function.name}") from exc
                 if not isinstance(args, dict):
-                    raise RuntimeError(f"tool arguments for {function.name} must be an object")
+                    error = RuntimeError(f"tool arguments for {function.name} must be an object")
+                    if trace:
+                        failed_event = trace.event(
+                            kind="tool", stage="retrieval" if target.server_name == "rag" else "tool",
+                            name=target.qualified_name,
+                            payload={"server": target.server_name, "tool": target.name}, parent_id=llm_event,
+                        )
+                        trace.finish_event(failed_event, status="failed", payload={"error": {"type": type(error).__name__, "message": str(error)}})
+                        trace.complete(status="failed", error={"type": type(error).__name__, "message": str(error)})
+                    raise error
+                try:
+                    validate_tool_arguments(target, args)
+                except MCPToolArgumentError as exc:
+                    if trace:
+                        failed_event = trace.event(
+                            kind="tool", stage="retrieval" if target.server_name == "rag" else "tool",
+                            name=target.qualified_name,
+                            payload={"server": target.server_name, "tool": target.name, "arguments": args}, parent_id=llm_event,
+                        )
+                        trace.finish_event(failed_event, status="failed", payload={"error": {"type": type(exc).__name__, "message": str(exc)}})
+                        trace.complete(status="failed", error={"type": type(exc).__name__, "message": str(exc)})
+                    raise
 
                 logger.info(
                     "agent tool_call=%s server=%s raw_tool=%s",
