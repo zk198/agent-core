@@ -184,6 +184,7 @@ async def answer_stream(request: AnswerRequest) -> StreamingResponse:
                 {
                     "detail": "grounded answer dependency failed",
                     "trace_id": trace.trace_id,
+                    "trace": trace.to_dict(),
                 }
             )
             yield f"event: error\ndata: {payload}\n\n"
