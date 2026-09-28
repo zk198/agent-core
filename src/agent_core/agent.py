@@ -294,7 +294,11 @@ class Agent:
                             name=target.qualified_name,
                             payload={"server": target.server_name, "tool": target.name}, parent_id=llm_event,
                         )
-                        trace.finish_event(failed_event, status="failed", payload={"error": {"type": type(error).__name__, "message": str(error)}})
+                        trace.finish_event(
+                            failed_event,
+                            status="failed",
+                            payload={"error": {"type": type(error).__name__, "message": str(error)}},
+                        )
                         trace.complete(status="failed", error={"type": type(error).__name__, "message": str(error)})
                     raise error
                 try:
@@ -304,9 +308,18 @@ class Agent:
                         failed_event = trace.event(
                             kind="tool", stage="retrieval" if target.server_name == "rag" else "tool",
                             name=target.qualified_name,
-                            payload={"server": target.server_name, "tool": target.name, "arguments": args}, parent_id=llm_event,
+                            payload={
+                                "server": target.server_name,
+                                "tool": target.name,
+                                "arguments": args,
+                            },
+                            parent_id=llm_event,
                         )
-                        trace.finish_event(failed_event, status="failed", payload={"error": {"type": type(exc).__name__, "message": str(exc)}})
+                        trace.finish_event(
+                            failed_event,
+                            status="failed",
+                            payload={"error": {"type": type(exc).__name__, "message": str(exc)}},
+                        )
                         trace.complete(status="failed", error={"type": type(exc).__name__, "message": str(exc)})
                     raise
                 tool_started = time.perf_counter()
