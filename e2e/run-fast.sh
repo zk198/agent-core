@@ -27,6 +27,54 @@ signature = hmac.new(
 print(f"{header}.{payload}.{b64(signature)}")
 PY
 )"
+export RAG_DIAGNOSTICS_TOKEN="$(python - <<'PY'
+import base64
+import hashlib
+import hmac
+import json
+import os
+
+def b64(value: bytes) -> str:
+    return base64.urlsafe_b64encode(value).rstrip(b"=").decode()
+
+header = b64(json.dumps({"alg": "HS256", "typ": "JWT"}, separators=(",", ":")).encode())
+payload = b64(json.dumps(
+    {"tenant_id": "e2e-tenant", "sub": "e2e-user", "permissions": ["diagnostics:read"]},
+    separators=(",", ":"),
+).encode())
+signing_input = f"{header}.{payload}".encode()
+signature = hmac.new(
+    os.environ["RAG_JWT_SECRET"].encode(),
+    signing_input,
+    hashlib.sha256,
+).digest()
+print(f"{header}.{payload}.{b64(signature)}")
+PY
+)"
+export RAG_OTHER_TENANT_DIAGNOSTICS_TOKEN="$(python - <<'PY'
+import base64
+import hashlib
+import hmac
+import json
+import os
+
+def b64(value: bytes) -> str:
+    return base64.urlsafe_b64encode(value).rstrip(b"=").decode()
+
+header = b64(json.dumps({"alg": "HS256", "typ": "JWT"}, separators=(",", ":")).encode())
+payload = b64(json.dumps(
+    {"tenant_id": "other-tenant", "sub": "e2e-user", "permissions": ["diagnostics:read"]},
+    separators=(",", ":"),
+).encode())
+signing_input = f"{header}.{payload}".encode()
+signature = hmac.new(
+    os.environ["RAG_JWT_SECRET"].encode(),
+    signing_input,
+    hashlib.sha256,
+).digest()
+print(f"{header}.{payload}.{b64(signature)}")
+PY
+)"
 
 compose="docker compose -f e2e/fast-compose.yaml"
 log_dir="${RUNNER_TEMP:-/tmp}/rag-e2e-fast"
@@ -94,6 +142,60 @@ gateway_chat() {
   log "gateway session E2E passed"
 }
 
+gateway_failure_diagnostics() {
+  log "calling invalid MCP argument through ai-gateway"
+  curl -fsS --max-time 60 \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer $RAG_E2E_TOKEN" \
+    -d '{"question":"RAG_E2E_INVALID_ARGS"}' \
+    http://localhost:18001/api/v1/answer/stream | tee "$log_dir/gateway-invalid-args.txt"
+  grep -q 'event: error' "$log_dir/gateway-invalid-args.txt"
+  trace_id="$(python - "$log_dir/gateway-invalid-args.txt" <<'PY'
+import json
+import sys
+
+text = open(sys.argv[1], encoding="utf-8").read()
+for frame in text.split("\n\n"):
+    if frame.startswith("event: error\ndata: "):
+        payload = json.loads(frame.split("data: ", 1)[1])
+        print(payload["trace_id"])
+        break
+else:
+    raise SystemExit("missing error trace_id")
+PY
+)"
+  test -n "$trace_id"
+
+  normal_status="$(curl -sS -o "$log_dir/diagnostics-normal.json" -w "%{http_code}" \
+    -H "Authorization: Bearer $RAG_E2E_TOKEN" \
+    "http://localhost:18001/api/v1/traces/$trace_id")"
+  test "$normal_status" = "403"
+
+  curl -fsS --max-time 30 \
+    -H "Authorization: Bearer $RAG_DIAGNOSTICS_TOKEN" \
+    "http://localhost:18001/api/v1/traces/$trace_id" | tee "$log_dir/diagnostic-trace.json"
+  python - "$log_dir/diagnostic-trace.json" <<'PY'
+import json
+import sys
+
+trace = json.load(open(sys.argv[1], encoding="utf-8"))
+assert trace["status"] == "failed"
+assert trace["error"]["type"] == "MCPToolArgumentError"
+failed_tools = [
+    event for event in trace["trace"]
+    if event.get("kind") == "tool" and event.get("status") == "failed"
+]
+assert failed_tools, trace
+PY
+
+  other_status="$(curl -sS -o "$log_dir/diagnostics-other-tenant.json" -w "%{http_code}" \
+    -H "Authorization: Bearer $RAG_OTHER_TENANT_DIAGNOSTICS_TOKEN" \
+    "http://localhost:18001/api/v1/traces/$trace_id")"
+  test "$other_status" = "404"
+  log "gateway MCP argument failure diagnostics E2E passed"
+}
+
 gateway_stream() {
   log "calling grounded answer stream through ai-gateway"
   curl -fsS --max-time 60 \
@@ -156,6 +258,7 @@ case "${1:-all}" in
   chat) chat ;;
   gateway-chat) gateway_chat ;;
   gateway-stream) gateway_stream ;;
+  gateway-failure-diagnostics) gateway_failure_diagnostics ;;
   stream) stream ;;
   cleanup) cleanup ;;
   all)
@@ -166,7 +269,7 @@ case "${1:-all}" in
     chat
     ;;
   *)
-    echo "usage: $0 [build|start-mocks|start-gateway|start-agent|start|wait-agent|wait-gateway|discover|chat|gateway-chat|gateway-stream|stream|cleanup|all]" >&2
+    echo "usage: $0 [build|start-mocks|start-gateway|start-agent|start|wait-agent|wait-gateway|discover|chat|gateway-chat|gateway-stream|gateway-failure-diagnostics|stream|cleanup|all]" >&2
     exit 2
     ;;
 esac
