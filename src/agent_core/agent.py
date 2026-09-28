@@ -190,8 +190,9 @@ class Agent:
         evidence: list[CitationEvidence] = []
         tool_calls_total = 0
         trace = current_trace()
+        agent_event = None
         if trace:
-            trace.event(
+            agent_event = trace.event(
                 kind="agent", stage="agent", name="agent.stream_grounded_answer",
                 payload={
                     "input_messages": input_messages,
@@ -207,6 +208,7 @@ class Agent:
                 llm_event = trace.event(
                     kind="llm", stage="llm", name=f"iteration.{iteration}",
                     payload={"model": model or self.settings.model_name, "messages": messages, "tools": openai_tools},
+                    parent_id=agent_event,
                 )
             stream = await self.client.chat.completions.create(
                 model=model or self.settings.model_name,
@@ -258,6 +260,8 @@ class Agent:
                     "tool_calls": tool_calls_total,
                 }
                 if trace:
+                    if agent_event:
+                        trace.finish_event(agent_event, status="completed")
                     trace.complete(status="completed")
                 return
 
@@ -338,6 +342,8 @@ class Agent:
                 })
 
         if trace:
+            if agent_event:
+                trace.finish_event(agent_event, status="failed", payload={"error": {"type": "RuntimeError", "message": "agent iteration limit exceeded"}})
             trace.complete(status="failed", error={"type": "RuntimeError", "message": "agent iteration limit exceeded"})
         raise RuntimeError("agent iteration limit exceeded")
 
@@ -351,8 +357,9 @@ class Agent:
         collect_citations: bool = False,
     ) -> AgentResult:
         trace = current_trace()
+        agent_event = None
         if trace:
-            trace.event(
+            agent_event = trace.event(
                 kind="agent", stage="agent", name="agent.run",
                 payload={
                     "input_messages": input_messages,
@@ -399,6 +406,7 @@ class Agent:
                 llm_event = trace.event(
                     kind="llm", stage="llm", name=f"iteration.{iteration}",
                     payload={"model": model or self.settings.model_name, "messages": messages, "tools": openai_tools},
+                    parent_id=agent_event,
                 )
             response = await self.client.chat.completions.create(
                 model=model or self.settings.model_name,
@@ -427,6 +435,8 @@ class Agent:
                     citations=tuple(evidence),
                 )
                 if trace:
+                    if agent_event:
+                        trace.finish_event(agent_event, status="completed")
                     trace.complete(status="completed")
                 return result
 
@@ -510,4 +520,7 @@ class Agent:
                     }
                 )
 
+        if trace and agent_event:
+            trace.finish_event(agent_event, status="failed", payload={"error": {"type": "RuntimeError", "message": "agent iteration limit exceeded"}})
+            trace.complete(status="failed", error={"type": "RuntimeError", "message": "agent iteration limit exceeded"})
         raise RuntimeError("agent iteration limit exceeded")
