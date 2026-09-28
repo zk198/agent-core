@@ -2,6 +2,8 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
+from jsonschema import ValidationError, validate  # type: ignore[import-untyped]
+
 from fastmcp import Client
 from fastmcp.client.transports import StreamableHttpTransport
 
@@ -10,6 +12,21 @@ from .observability import request_id
 
 class MCPToolError(RuntimeError):
     """A tool completed at the MCP protocol level with an error result."""
+
+
+class MCPToolArgumentError(RuntimeError):
+    """Model-generated tool arguments failed the MCP input schema."""
+
+
+def validate_tool_arguments(tool: "MCPTool", arguments: dict[str, Any]) -> None:
+    try:
+        validate(instance=arguments, schema=tool.input_schema)
+    except ValidationError as exc:
+        path = "".join(f"[{item!r}]" if isinstance(item, int) else f".{item}" for item in exc.absolute_path)
+        location = path.lstrip(".") or "arguments"
+        raise MCPToolArgumentError(
+            f"invalid arguments for tool {tool.qualified_name}: {location}: {exc.message}"
+        ) from exc
 
 
 @dataclass(frozen=True)

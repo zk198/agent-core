@@ -221,3 +221,39 @@ def test_grounded_answer_maps_agent_failure_to_502(monkeypatch):
     response = TestClient(app).post("/api/v1/answer", json={"question": "What?"})
     assert response.status_code == 502
     assert response.json()["detail"] == "grounded answer dependency failed"
+
+
+def test_grounded_answer_stream_maps_tool_validation_failure_to_error_event(monkeypatch):
+    import agent_core.api as api
+    from agent_core.mcp_client import MCPToolArgumentError
+    from agent_core.observability import current_trace
+
+    async def failing_stream(question=None, model=None, *, conversation_messages=None):
+        trace = current_trace()
+        assert trace is not None
+        event_id = trace.event(
+            kind="tool",
+            stage="tool",
+            name="web.echo",
+            payload={"arguments": {"text": 123}},
+        )
+        trace.finish_event(
+            event_id,
+            status="failed",
+            payload={"error": {"type": "MCPToolArgumentError", "message": "invalid arguments"}},
+        )
+        yield {"type": "delta", "content": "partial"}
+        raise MCPToolArgumentError("invalid arguments for tool web.echo: text: 123 is not of type 'string'")
+
+    monkeypatch.setattr(api.agent, "stream_grounded_answer", failing_stream)
+    response = TestClient(app).post("/api/v1/answer/stream", json={"question": "What?"})
+    assert response.status_code == 200
+
+    frames = [frame for frame in response.text.split("\n\n") if frame]
+    assert len(frames) == 2
+    assert frames[0] == 'event: delta\ndata: {"content": "partial"}'
+    assert frames[1].startswith("event: error\ndata: ")
+
+    payload = json.loads(frames[1].split("data: ", 1)[1])
+    assert payload["detail"] == "grounded answer dependency failed"
+    assert payload["trace_id"]
