@@ -193,7 +193,11 @@ class Agent:
         if trace:
             trace.event(
                 kind="agent", stage="agent", name="agent.stream_grounded_answer",
-                payload={"input_messages": input_messages, "model": model or self.settings.model_name, "system_prompt": system_prompt},
+                payload={
+                    "input_messages": input_messages,
+                    "model": model or self.settings.model_name,
+                    "system_prompt": system_prompt,
+                },
             )
 
         for iteration in range(1, self.settings.max_iterations + 1):
