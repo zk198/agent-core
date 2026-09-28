@@ -39,6 +39,9 @@ class FakeResponse:
     def __init__(self, message):
         self.choices = [FakeChoice(message)]
 
+    def model_dump(self, exclude_none=True):
+        return {"choices": [{"message": self.choices[0].message.model_dump(exclude_none=exclude_none)}]}
+
 
 class FakeCompletions:
     def __init__(self):
