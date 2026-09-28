@@ -7,6 +7,7 @@ dependencies = [
   "fastapi>=0.116,<1",
   "fastmcp>=4.0.0,<5",
   "httpx>=0.28,<1",
+  "jsonschema>=4.25,<5",
   "openai>=1.107,<2",
   "pydantic-settings>=2.10,<3",
   "uvicorn[standard]>=0.35,<1",
