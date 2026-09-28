@@ -79,12 +79,16 @@ def test_grounded_answer_contract(monkeypatch):
     monkeypatch.setattr(api.agent, "run_grounded_answer", fake_answer)
     response = TestClient(app).post("/api/v1/answer", json={"question": "What?"})
     assert response.status_code == 200
-    assert response.json() == {
-        "answer": "The answer is supported [S1].",
-        "citations": [{"id": "S1", "chunk_id": "c1", "source_name": "mailbox", "text": "Evidence text"}],
-        "iterations": 2,
-        "tool_calls": 1,
-    }
+    payload = response.json()
+    assert payload["answer"] == "The answer is supported [S1]."
+    assert payload["citations"] == [
+        {"id": "S1", "chunk_id": "c1", "source_name": "mailbox", "text": "Evidence text"}
+    ]
+    assert payload["iterations"] == 2
+    assert payload["tool_calls"] == 1
+    assert payload["trace"]["schema_version"] == "1.0"
+    assert payload["trace"]["status"] == "completed"
+    assert payload["trace"]["trace_id"]
 
 
 def test_grounded_answer_stream_contract(monkeypatch):
