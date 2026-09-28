@@ -125,7 +125,14 @@ async def chat(request: ChatRequest) -> ChatResponse:
             error={"type": type(exc).__name__, "message": str(exc)},
         )
         logger.exception("agent_run_failed")
-        raise HTTPException(status_code=502, detail="agent dependency failed") from exc
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "message": "agent dependency failed",
+                "trace_id": trace.trace_id,
+                "trace": trace.to_dict(),
+            },
+        ) from exc
     finally:
         reset_trace(trace_token)
 
@@ -241,6 +248,13 @@ async def answer(request: AnswerRequest) -> AnswerResponse:
             error={"type": type(exc).__name__, "message": str(exc)},
         )
         logger.exception("grounded_answer_failed")
-        raise HTTPException(status_code=502, detail="grounded answer dependency failed") from exc
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "message": "grounded answer dependency failed",
+                "trace_id": trace.trace_id,
+                "trace": trace.to_dict(),
+            },
+        ) from exc
     finally:
         reset_trace(trace_token)

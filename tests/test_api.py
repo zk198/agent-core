@@ -220,7 +220,29 @@ def test_grounded_answer_maps_agent_failure_to_502(monkeypatch):
     monkeypatch.setattr(api.agent, "run_grounded_answer", failing_answer)
     response = TestClient(app).post("/api/v1/answer", json={"question": "What?"})
     assert response.status_code == 502
-    assert response.json()["detail"] == "grounded answer dependency failed"
+    detail = response.json()["detail"]
+    assert detail["message"] == "grounded answer dependency failed"
+    assert detail["trace_id"]
+    assert detail["trace"]["trace_id"] == detail["trace_id"]
+    assert detail["trace"]["status"] == "failed"
+    assert detail["trace"]["error"]["type"] == "RuntimeError"
+
+
+def test_chat_maps_agent_failure_to_502_with_trace(monkeypatch):
+    import agent_core.api as api
+
+    async def failing_chat(messages, model=None):
+        raise RuntimeError("model unavailable")
+
+    monkeypatch.setattr(api.agent, "run_messages", failing_chat)
+    response = TestClient(app).post("/api/v1/chat", json={"message": "What?"})
+    assert response.status_code == 502
+    detail = response.json()["detail"]
+    assert detail["message"] == "agent dependency failed"
+    assert detail["trace_id"]
+    assert detail["trace"]["trace_id"] == detail["trace_id"]
+    assert detail["trace"]["status"] == "failed"
+    assert detail["trace"]["error"]["type"] == "RuntimeError"
 
 
 def test_grounded_answer_stream_maps_tool_validation_failure_to_error_event(monkeypatch):
