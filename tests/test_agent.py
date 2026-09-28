@@ -62,7 +62,7 @@ class FakeRegistry:
         attrs = {
             "name": "echo",
             "description": "echo",
-            "input_schema": {"type": "object"},
+            "input_schema": {"type": "object", "required": ["text"], "properties": {"text": {"type": "string"}}},
             "server": "test",
             "server_name": "web",
             "model_name": "web__echo",
@@ -299,5 +299,47 @@ async def test_agent_records_mcp_tool_error_as_failed_trace_event():
         assert trace.error["type"] == "MCPToolError"
         assert trace.events[-1]["kind"] == "tool"
         assert trace.events[-1]["status"] == "failed"
+    finally:
+        reset_trace(token)
+
+
+@pytest.mark.asyncio
+async def test_agent_rejects_tool_arguments_that_fail_schema_validation():
+    class BadSchemaClient(FakeClient):
+        def __init__(self):
+            super().__init__()
+
+            class BadFunction:
+                name = "web__echo"
+                arguments = json.dumps({"text": 123})
+
+            class BadCall:
+                id = "call-schema"
+                type = "function"
+                function = BadFunction()
+
+            class BadToolMessage(FakeMessage):
+                tool_calls = [BadCall()]
+                content = None
+
+            async def create(_self, **kwargs):
+                return FakeResponse(BadToolMessage())
+
+            self.chat.completions = type("C", (), {"create": create})()
+
+    from agent_core.mcp_client import MCPToolArgumentError
+    from agent_core.observability import reset_trace, start_trace
+
+    trace, token = start_trace()
+    try:
+        agent = Agent(Settings(max_iterations=1), FakeRegistry())
+        agent.client = BadSchemaClient()
+        with pytest.raises(MCPToolArgumentError, match="invalid arguments"):
+            await agent.run("hello")
+        assert trace.status == "failed"
+        assert trace.error["type"] == "MCPToolArgumentError"
+        assert trace.events[-1]["kind"] == "tool"
+        assert trace.events[-1]["status"] == "failed"
+        assert trace.events[-1]["payload"]["error"]["type"] == "MCPToolArgumentError"
     finally:
         reset_trace(token)
