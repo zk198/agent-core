@@ -1,3 +1,5 @@
+import json
+
 from fastapi.testclient import TestClient
 
 from agent_core.api import app
@@ -79,19 +81,34 @@ def test_grounded_answer_contract(monkeypatch):
     monkeypatch.setattr(api.agent, "run_grounded_answer", fake_answer)
     response = TestClient(app).post("/api/v1/answer", json={"question": "What?"})
     assert response.status_code == 200
-    assert response.json() == {
-        "answer": "The answer is supported [S1].",
-        "citations": [{"id": "S1", "chunk_id": "c1", "source_name": "mailbox", "text": "Evidence text"}],
-        "iterations": 2,
-        "tool_calls": 1,
-    }
+    payload = response.json()
+    assert payload["answer"] == "The answer is supported [S1]."
+    assert payload["citations"] == [
+        {"id": "S1", "chunk_id": "c1", "source_name": "mailbox", "text": "Evidence text"}
+    ]
+    assert payload["iterations"] == 2
+    assert payload["tool_calls"] == 1
+    assert payload["trace"]["schema_version"] == "1.0"
+    assert payload["trace"]["status"] == "completed"
+    assert payload["trace"]["trace_id"]
 
 
 def test_grounded_answer_stream_contract(monkeypatch):
     import agent_core.api as api
-    from agent_core.agent import CitationEvidence
+    from agent_core.agent import CitationEvidence, current_trace
 
     async def fake_stream(question=None, model=None, *, conversation_messages=None):
+        trace = current_trace()
+        assert trace is not None
+        trace.log(level="INFO", message="stream delta emitted", stage="llm")
+        trace.metric("stream_deltas", 2)
+        event_id = trace.event(
+            kind="llm",
+            stage="llm",
+            name="stream.iteration",
+            payload={"content": "Hello world."},
+        )
+        trace.finish_event(event_id, status="completed")
         yield {"type": "delta", "content": "Hello "}
         yield {"type": "delta", "content": "world."}
         yield {
@@ -105,10 +122,33 @@ def test_grounded_answer_stream_contract(monkeypatch):
     response = TestClient(app).post("/api/v1/answer/stream", json={"question": "What?"})
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/event-stream")
-    assert "event: delta" in response.text
-    assert '"content": "Hello "' in response.text
-    assert "event: done" in response.text
-    assert '"id": "S1"' in response.text
+
+    frames = [frame for frame in response.text.split("\n\n") if frame]
+    assert len(frames) == 3
+    assert frames[0].startswith("event: delta\ndata: ")
+    assert frames[1].startswith("event: delta\ndata: ")
+    assert frames[2].startswith("event: done\ndata: ")
+
+    delta_payloads = [json.loads(frame.split("data: ", 1)[1]) for frame in frames[:2]]
+    assert delta_payloads == [{"content": "Hello "}, {"content": "world."}]
+
+    done = json.loads(frames[2].split("data: ", 1)[1])
+    assert done["citations"] == [
+        {"id": "S1", "chunk_id": "c1", "source_name": "mailbox", "text": "Evidence"}
+    ]
+    assert done["iterations"] == 2
+    assert done["tool_calls"] == 1
+    assert done["trace_id"]
+    assert done["trace"]["trace_id"] == done["trace_id"]
+    assert done["trace"]["status"] == "completed"
+    assert len(done["trace"]["logs"]) == 1
+    assert done["trace"]["logs"][0]["level"] == "INFO"
+    assert done["trace"]["logs"][0]["message"] == "stream delta emitted"
+    assert done["trace"]["logs"][0]["stage"] == "llm"
+    assert done["trace"]["metrics"]["stream_deltas"] == 2
+    assert len(done["trace"]["trace"]) == 1
+    assert done["trace"]["trace"][0]["name"] == "stream.iteration"
+    assert done["trace"]["trace"][0]["status"] == "completed"
 
 
 def test_chat_accepts_message_history(monkeypatch):
