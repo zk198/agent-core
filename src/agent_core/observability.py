@@ -27,12 +27,7 @@ def normalize_request_id(value: str | None) -> str:
 
 
 class ExecutionTrace:
-    """Canonical full-fidelity execution trace.
-
-    The object is intentionally independent of the UI and serializes to stable JSON data.
-    Level-3 authorization is enforced by the gateway; this class does not redact user
-    prompts/tool payloads because those are required for privileged debugging.
-    """
+    """Canonical full-fidelity execution trace."""
 
     schema_version = "1.0"
 
@@ -61,18 +56,20 @@ class ExecutionTrace:
     ) -> str:
         self._sequence += 1
         event_id = uuid.uuid4().hex
-        self.events.append({
-            "event_id": event_id,
-            "parent_id": parent_id,
-            "sequence": self._sequence,
-            "kind": kind,
-            "stage": stage,
-            "name": name,
-            "status": status,
-            "started_at": datetime.now(UTC).isoformat(),
-            "duration_ms": None,
-            "payload": payload or {},
-        })
+        self.events.append(
+            {
+                "event_id": event_id,
+                "parent_id": parent_id,
+                "sequence": self._sequence,
+                "kind": kind,
+                "stage": stage,
+                "name": name,
+                "status": status,
+                "started_at": datetime.now(UTC).isoformat(),
+                "duration_ms": None,
+                "payload": payload or {},
+            }
+        )
         return event_id
 
     def finish_event(
@@ -93,12 +90,24 @@ class ExecutionTrace:
                 return
 
     def log(self, *, level: str, message: str, **fields: Any) -> None:
-        self.logs.append({\n            "timestamp": datetime.now(UTC).isoformat(),\n            "level": level,\n            "message": message,\n            **fields,\n        })
+        self.logs.append(
+            {
+                "timestamp": datetime.now(UTC).isoformat(),
+                "level": level,
+                "message": message,
+                **fields,
+            }
+        )
 
     def metric(self, name: str, value: Any) -> None:
         self.metrics[name] = value
 
-    def complete(self, *, status: str = "completed", error: dict[str, Any] | None = None) -> None:
+    def complete(
+        self,
+        *,
+        status: str = "completed",
+        error: dict[str, Any] | None = None,
+    ) -> None:
         self.status = status
         self.error = error
         self.completed_at = datetime.now(UTC).isoformat()
