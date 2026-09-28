@@ -242,6 +242,7 @@ def test_grounded_answer_stream_maps_tool_validation_failure_to_error_event(monk
             status="failed",
             payload={"error": {"type": "MCPToolArgumentError", "message": "invalid arguments"}},
         )
+        yield {"type": "delta", "content": "partial"}
         raise MCPToolArgumentError("invalid arguments for tool web.echo: text: 123 is not of type 'string'")
 
     monkeypatch.setattr(api.agent, "stream_grounded_answer", failing_stream)
@@ -250,7 +251,7 @@ def test_grounded_answer_stream_maps_tool_validation_failure_to_error_event(monk
 
     frames = [frame for frame in response.text.split("\n\n") if frame]
     assert len(frames) == 1
-    assert frames[0].startswith("event: error\\ndata: ")
+    assert frames[0].startswith("event: error\ndata: ")
 
     payload = json.loads(frames[0].split("data: ", 1)[1])
     assert payload["detail"] == "grounded answer dependency failed"
