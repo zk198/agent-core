@@ -4,7 +4,7 @@ from fastmcp.client.transports import StreamableHttpTransport
 
 import pytest
 
-from agent_core.mcp_client import MCPRegistry, MCPServer, MCPToolError
+from agent_core.mcp_client import MCPRegistry, MCPServer, MCPToolArgumentError, MCPToolError, validate_tool_arguments
 
 
 @pytest.mark.asyncio
@@ -159,3 +159,36 @@ def test_remote_mcp_client_propagates_request_id(monkeypatch):
         assert client.transport.headers["X-Request-ID"] == "phase1c-test-id"
     finally:
         reset_request_id(token)
+
+
+def test_validate_tool_arguments_accepts_schema():
+    tool = type(
+        "Tool",
+        (),
+        {
+            "qualified_name": "web.echo",
+            "input_schema": {
+                "type": "object",
+                "required": ["text"],
+                "properties": {"text": {"type": "string"}},
+            },
+        },
+    )()
+    validate_tool_arguments(tool, {"text": "hello"})
+
+
+def test_validate_tool_arguments_rejects_schema_mismatch():
+    tool = type(
+        "Tool",
+        (),
+        {
+            "qualified_name": "web.echo",
+            "input_schema": {
+                "type": "object",
+                "required": ["text"],
+                "properties": {"text": {"type": "string"}},
+            },
+        },
+    )()
+    with pytest.raises(MCPToolArgumentError, match="text"):
+        validate_tool_arguments(tool, {"text": 123})
