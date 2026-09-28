@@ -66,6 +66,7 @@ class FakeRegistry:
             "server": "test",
             "server_name": "web",
             "model_name": "web__echo",
+            "qualified_name": "web.echo",
         }
         tool = type("Tool", (), attrs)
         return [tool()]
