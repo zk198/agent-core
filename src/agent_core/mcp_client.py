@@ -8,6 +8,10 @@ from fastmcp.client.transports import StreamableHttpTransport
 from .observability import request_id
 
 
+class MCPToolError(RuntimeError):
+    """A tool completed at the MCP protocol level with an error result."""
+
+
 @dataclass(frozen=True)
 class MCPServer:
     url: str
@@ -81,4 +85,7 @@ class MCPRegistry:
         if target is None:
             raise RuntimeError(f"unknown MCP server: {server}")
         async with self._client(target) as client:
-            return await client.call_tool(name, arguments)
+            result = await client.call_tool(name, arguments)
+        if getattr(result, "is_error", False):
+            raise MCPToolError(f"MCP tool {target.tool_namespace}.{name} returned an error")
+        return result
