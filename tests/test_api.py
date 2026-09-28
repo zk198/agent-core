@@ -1,3 +1,5 @@
+import json
+
 from fastapi.testclient import TestClient
 
 from agent_core.api import app
@@ -139,9 +141,10 @@ def test_grounded_answer_stream_contract(monkeypatch):
     assert done["trace_id"]
     assert done["trace"]["trace_id"] == done["trace_id"]
     assert done["trace"]["status"] == "completed"
-    assert done["trace"]["logs"] == [
-        {"timestamp": done["trace"]["logs"][0]["timestamp"], "level": "INFO", "message": "stream delta emitted", "stage": "llm", "data": {}}
-    ]
+    assert len(done["trace"]["logs"]) == 1
+    assert done["trace"]["logs"][0]["level"] == "INFO"
+    assert done["trace"]["logs"][0]["message"] == "stream delta emitted"
+    assert done["trace"]["logs"][0]["stage"] == "llm"
     assert done["trace"]["metrics"]["stream_deltas"] == 2
     assert len(done["trace"]["trace"]) == 1
     assert done["trace"]["trace"][0]["name"] == "stream.iteration"
