@@ -39,6 +39,9 @@ class FakeResponse:
     def __init__(self, message):
         self.choices = [FakeChoice(message)]
 
+    def model_dump(self, exclude_none=True):
+        return {"choices": [{"message": self.choices[0].message.model_dump(exclude_none=exclude_none)}]}
+
 
 class FakeCompletions:
     def __init__(self):
@@ -63,6 +66,7 @@ class FakeRegistry:
             "server": "test",
             "server_name": "web",
             "model_name": "web__echo",
+            "qualified_name": "web.echo",
         }
         tool = type("Tool", (), attrs)
         return [tool()]
@@ -250,3 +254,50 @@ async def test_grounded_answer_extracts_nested_mcp_result_citations():
     result = await agent.run_grounded_answer("What is the evidence?")
     assert result.citations[0].chunk_id == "nested-1"
     assert result.citations[0].source_name == "mailbox"
+
+
+@pytest.mark.asyncio
+async def test_agent_records_tool_timeout_as_failed_trace_event():
+    from agent_core.observability import reset_trace, start_trace
+
+    class TimeoutRegistry(FakeRegistry):
+        async def call(self, server, name, arguments):
+            raise TimeoutError("MCP request timed out")
+
+    trace, token = start_trace()
+    try:
+        agent = Agent(Settings(max_iterations=1), TimeoutRegistry())
+        agent.client = FakeClient()
+        with pytest.raises(TimeoutError, match="timed out"):
+            await agent.run("hello")
+        assert trace.status == "failed"
+        assert trace.error["type"] == "TimeoutError"
+        assert trace.events[-1]["kind"] == "tool"
+        assert trace.events[-1]["status"] == "failed"
+        assert trace.events[-1]["payload"]["error"]["type"] == "TimeoutError"
+        assert trace.events[-1]["payload"]["error"]["message"] == "MCP request timed out"
+    finally:
+        reset_trace(token)
+
+
+@pytest.mark.asyncio
+async def test_agent_records_mcp_tool_error_as_failed_trace_event():
+    from agent_core.mcp_client import MCPToolError
+    from agent_core.observability import reset_trace, start_trace
+
+    class ErrorRegistry(FakeRegistry):
+        async def call(self, server, name, arguments):
+            raise MCPToolError("MCP tool returned an error")
+
+    trace, token = start_trace()
+    try:
+        agent = Agent(Settings(max_iterations=1), ErrorRegistry())
+        agent.client = FakeClient()
+        with pytest.raises(MCPToolError, match="returned an error"):
+            await agent.run("hello")
+        assert trace.status == "failed"
+        assert trace.error["type"] == "MCPToolError"
+        assert trace.events[-1]["kind"] == "tool"
+        assert trace.events[-1]["status"] == "failed"
+    finally:
+        reset_trace(token)
