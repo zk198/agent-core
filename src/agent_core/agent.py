@@ -8,7 +8,7 @@ from openai import AsyncOpenAI
 
 from .config import Settings
 from .context import ContextBudget
-from .mcp_client import MCPRegistry, MCPToolArgumentError, validate_tool_arguments
+from .mcp_client import MCPRegistry, MCPToolArgumentError, MCPToolArgumentsJSONError, MCPToolResolutionError, validate_tool_arguments
 from .observability import current_trace, request_id
 
 logger = logging.getLogger(__name__)
@@ -281,11 +281,11 @@ class Agent:
                 function = call["function"]
                 target = next((tool for tool in tools if tool.model_name == function["name"]), None)
                 if target is None:
-                    raise RuntimeError(f"unknown tool: {function['name']}")
+                    raise MCPToolResolutionError(f"unknown tool: {function['name']}")
                 try:
                     args = json.loads(function["arguments"] or "{}")
                 except json.JSONDecodeError as exc:
-                    raise RuntimeError(f"invalid arguments for tool {function['name']}") from exc
+                    raise MCPToolArgumentsJSONError(f"invalid JSON arguments for tool {function['name']}") from exc
                 if not isinstance(args, dict):
                     error = RuntimeError(f"tool arguments for {function['name']} must be an object")
                     if trace:
@@ -492,12 +492,12 @@ class Agent:
 
                 target = next((tool for tool in tools if tool.model_name == function.name), None)
                 if target is None:
-                    raise RuntimeError(f"unknown tool: {function.name}")
+                    raise MCPToolResolutionError(f"unknown tool: {function.name}")
 
                 try:
                     args = json.loads(function.arguments or "{}")
                 except json.JSONDecodeError as exc:
-                    raise RuntimeError(f"invalid arguments for tool {function.name}") from exc
+                    raise MCPToolArgumentsJSONError(f"invalid JSON arguments for tool {function.name}") from exc
                 if not isinstance(args, dict):
                     error = RuntimeError(f"tool arguments for {function.name} must be an object")
                     if trace:
