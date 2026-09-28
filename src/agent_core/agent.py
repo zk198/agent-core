@@ -343,7 +343,11 @@ class Agent:
 
         if trace:
             if agent_event:
-                trace.finish_event(agent_event, status="failed", payload={"error": {"type": "RuntimeError", "message": "agent iteration limit exceeded"}})
+                trace.finish_event(
+                    agent_event,
+                    status="failed",
+                    payload={"error": {"type": "RuntimeError", "message": "agent iteration limit exceeded"}},
+                )
             trace.complete(status="failed", error={"type": "RuntimeError", "message": "agent iteration limit exceeded"})
         raise RuntimeError("agent iteration limit exceeded")
 
@@ -521,6 +525,10 @@ class Agent:
                 )
 
         if trace and agent_event:
-            trace.finish_event(agent_event, status="failed", payload={"error": {"type": "RuntimeError", "message": "agent iteration limit exceeded"}})
+            trace.finish_event(
+                agent_event,
+                status="failed",
+                payload={"error": {"type": "RuntimeError", "message": "agent iteration limit exceeded"}},
+            )
             trace.complete(status="failed", error={"type": "RuntimeError", "message": "agent iteration limit exceeded"})
         raise RuntimeError("agent iteration limit exceeded")
