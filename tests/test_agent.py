@@ -266,7 +266,8 @@ async def test_agent_records_tool_timeout_as_failed_trace_event():
         agent.client = FakeClient()
         with pytest.raises(TimeoutError, match="timed out"):
             await agent.run("hello")
-        assert trace.status == "running"
+        assert trace.status == "failed"
+        assert trace.error["type"] == "TimeoutError"
         assert trace.events[-1]["kind"] == "tool"
         assert trace.events[-1]["status"] == "failed"
         assert trace.events[-1]["payload"]["error"]["type"] == "TimeoutError"
