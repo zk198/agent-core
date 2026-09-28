@@ -8,7 +8,13 @@ from openai import AsyncOpenAI
 
 from .config import Settings
 from .context import ContextBudget
-from .mcp_client import MCPRegistry, MCPToolArgumentError, MCPToolArgumentsJSONError, MCPToolResolutionError, validate_tool_arguments
+from .mcp_client import (
+    MCPRegistry,
+    MCPToolArgumentError,
+    MCPToolArgumentsJSONError,
+    MCPToolResolutionError,
+    validate_tool_arguments,
+)
 from .observability import current_trace, request_id
 
 logger = logging.getLogger(__name__)
