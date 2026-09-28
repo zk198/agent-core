@@ -250,9 +250,10 @@ def test_grounded_answer_stream_maps_tool_validation_failure_to_error_event(monk
     assert response.status_code == 200
 
     frames = [frame for frame in response.text.split("\n\n") if frame]
-    assert len(frames) == 1
-    assert frames[0].startswith("event: error\ndata: ")
+    assert len(frames) == 2
+    assert frames[0] == 'event: delta\ndata: {"content": "partial"}'
+    assert frames[1].startswith("event: error\ndata: ")
 
-    payload = json.loads(frames[0].split("data: ", 1)[1])
+    payload = json.loads(frames[1].split("data: ", 1)[1])
     assert payload["detail"] == "grounded answer dependency failed"
     assert payload["trace_id"]
