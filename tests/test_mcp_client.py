@@ -4,7 +4,7 @@ from fastmcp.client.transports import StreamableHttpTransport
 
 import pytest
 
-from agent_core.mcp_client import MCPRegistry, MCPServer
+from agent_core.mcp_client import MCPRegistry, MCPServer, MCPToolError
 
 
 @pytest.mark.asyncio
@@ -88,6 +88,47 @@ async def test_call_uses_raw_mcp_tool_name_after_model_namespace_resolution():
     assert result.content[0].text == "web:hello"
 
 
+@pytest.mark.asyncio
+async def test_call_propagates_transport_timeout():
+    class TimeoutClient:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return False
+
+        async def call_tool(self, name, arguments):
+            raise TimeoutError("MCP request timed out")
+
+    registry = MCPRegistry([MCPServer("test://timeout", name="web")])
+    registry._client = lambda _: TimeoutClient()  # type: ignore[method-assign]
+
+    with pytest.raises(TimeoutError, match="timed out"):
+        await registry.call("test://timeout", "echo", {})
+
+
+@pytest.mark.asyncio
+async def test_call_rejects_protocol_error_result():
+    class ErrorResult:
+        is_error = True
+
+    class ErrorClient:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            return False
+
+        async def call_tool(self, name, arguments):
+            return ErrorResult()
+
+    registry = MCPRegistry([MCPServer("test://error", name="web")])
+    registry._client = lambda _: ErrorClient()  # type: ignore[method-assign]
+
+    with pytest.raises(MCPToolError, match="returned an error"):
+        await registry.call("test://error", "echo", {})
+
+
 def test_remote_mcp_client_uses_streamable_http_transport_and_bearer_auth():
     server = MCPServer("https://example.test/mcp", "secret", name="rag")
     registry = MCPRegistry([server])
@@ -109,7 +150,8 @@ def test_remote_mcp_client_uses_streamable_http_without_auth_when_unconfigured()
 
 
 def test_remote_mcp_client_propagates_request_id(monkeypatch):
-    from agent_core.observability import set_request_id, reset_request_id
+    from agent_core.observability import reset_request_id, set_request_id
+
     token = set_request_id("phase1c-test-id")
     try:
         server = MCPServer("https://example.test/mcp", name="rag")
