@@ -100,7 +100,7 @@ def test_grounded_answer_stream_contract(monkeypatch):
     async def fake_stream(question=None, model=None, *, conversation_messages=None):
         trace = current_trace()
         assert trace is not None
-        trace.log("stream delta emitted", stage="llm")
+        trace.log(level="INFO", message="stream delta emitted", stage="llm")
         trace.metric("stream_deltas", 2)
         event_id = trace.event(
             kind="llm",
