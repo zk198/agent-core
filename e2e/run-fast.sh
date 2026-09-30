@@ -122,6 +122,8 @@ start_mocks() {
   $compose up -d mock-llm
   log "starting mock retrieval"
   $compose up -d mock-retrieval
+  log "starting mock Laya"
+  $compose up -d mock-laya
 }
 start_gateway() {
   log "starting AI gateway"
@@ -133,6 +135,63 @@ start_agent() {
 }
 wait_agent() { wait_for "agent-core" "http://localhost:18000/api/v1/health"; }
 wait_gateway() { wait_for "ai-gateway" "http://localhost:18001/health"; }
+
+laya_gateway() {
+  log "calling privileged gateway System-1 boundary against mocked Laya"
+  curl -fsS --max-time 30 \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer $RAG_DIAGNOSTICS_TOKEN" \
+    -H "X-Request-ID: phase1d-laya-gateway" \
+    -d '{"state":{"message":"classify this request"},"questions":{"request_type":{"type":"choice","instructions":"Classify the request type.","criteria":{"knowledge":"asks for information or explanation","action":"asks to perform or plan an action","other":"other"}}}}' \
+    http://localhost:18001/api/v1/systemone | tee "$log_dir/laya-gateway.json"
+  grep -q '"noul": true' "$log_dir/laya-gateway.json"
+  grep -q 'e2e/mock-laya' "$log_dir/laya-gateway.json"
+  log "gateway Laya boundary E2E passed"
+}
+
+laya_trace() {
+  log "checking Laya System-1 trace through agent and gateway"
+  python - "$log_dir/chat.json" <<'PY'
+import json
+import sys
+payload = json.load(open(sys.argv[1], encoding="utf-8"))
+events = payload["trace"]["trace"]
+laya = [event for event in events if event.get("kind") == "system1" and event.get("stage") == "laya"]
+assert laya, events
+assert laya[0]["name"] == "laya.systemone"
+assert laya[0]["payload"]["answers"]["allowed"]["noul"] is True
+assert laya[0]["payload"]["routing"]["model"] == "e2e/mock-laya"
+PY
+  curl -fsS --max-time 30 \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer $RAG_E2E_TOKEN" \
+    -d '{"question":"Check the Laya trace."}' \
+    http://localhost:18001/api/v1/answer | tee "$log_dir/gateway-laya-answer.json"
+  trace_id="$(python - "$log_dir/gateway-laya-answer.json" <<'PY'
+import json
+import sys
+payload = json.load(open(sys.argv[1], encoding="utf-8"))
+print(payload["trace_id"])
+PY
+)"
+  test -n "$trace_id"
+  curl -fsS --max-time 30 \
+    -H "Authorization: Bearer $RAG_DIAGNOSTICS_TOKEN" \
+    "http://localhost:18001/api/v1/traces/$trace_id" | tee "$log_dir/gateway-laya-trace.json"
+  python - "$log_dir/gateway-laya-trace.json" <<'PY'
+import json
+import sys
+trace = json.load(open(sys.argv[1], encoding="utf-8"))
+events = trace["trace"]
+laya = [event for event in events if event.get("kind") == "system1" and event.get("stage") == "laya"]
+assert laya, events
+assert laya[0]["payload"]["answers"]["allowed"]["noul"] is True
+assert laya[0]["payload"]["routing"]["model"] == "e2e/mock-laya"
+PY
+  log "agent/gateway Laya trace propagation E2E passed"
+}
 
 gateway_chat() {
   log "calling agent through ai-gateway session boundary"
@@ -266,6 +325,8 @@ case "${1:-all}" in
   discover) discover ;;
   chat) chat ;;
   gateway-chat) gateway_chat ;;
+  laya-gateway) laya_gateway ;;
+  laya-trace) laya_trace ;;
   gateway-stream) gateway_stream ;;
   gateway-failure-diagnostics) gateway_failure_diagnostics ;;
   stream) stream ;;
@@ -276,9 +337,10 @@ case "${1:-all}" in
     start
     discover
     chat
+    laya_trace
     ;;
   *)
-    echo "usage: $0 [build|start-mocks|start-gateway|start-agent|start|wait-agent|wait-gateway|discover|chat|gateway-chat|gateway-stream|gateway-failure-diagnostics|stream|cleanup|all]" >&2
+    echo "usage: $0 [build|start-mocks|start-gateway|start-agent|start|wait-agent|wait-gateway|discover|chat|gateway-chat|gateway-stream|gateway-failure-diagnostics|laya-gateway|laya-trace|stream|cleanup|all]" >&2
     exit 2
     ;;
 esac
