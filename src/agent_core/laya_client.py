@@ -6,10 +6,11 @@ from .observability import request_id
 
 
 class LayaClient:
-    def __init__(self, base_url: str, timeout_seconds: float = 5.0, api_key: str | None = None) -> None:
+    def __init__(self, base_url: str, timeout_seconds: float = 5.0, api_key: str | None = None, transport: httpx.AsyncBaseTransport | None = None) -> None:
         self.base_url = base_url.rstrip("/")
         self.timeout_seconds = timeout_seconds
         self.api_key = api_key
+        self.transport = transport
 
     def _headers(self) -> dict[str, str]:
         headers: dict[str, str] = {}
@@ -25,7 +26,7 @@ class LayaClient:
         if model:
             body["model"] = model
         try:
-            async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+            async with httpx.AsyncClient(timeout=self.timeout_seconds, transport=self.transport) as client:
                 response = await client.post(
                     f"{self.base_url}/v1/systemone",
                     json=body,
