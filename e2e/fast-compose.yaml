@@ -7,12 +7,17 @@ services:
       AI_AGENT_URL: http://agent-core:8000
       AI_POSTGRES_DSN: postgresql://rag:rag@postgres:5432/rag
       RAG_JWT_SECRET: ${RAG_JWT_SECRET:?set RAG_JWT_SECRET}
+      LAYA_ENABLED: "true"
+      LAYA_URL: http://mock-laya:8000
+      LAYA_TIMEOUT_SECONDS: "5"
     ports:
       - "18001:8200"
     depends_on:
       postgres:
         condition: service_healthy
       mock-retrieval:
+        condition: service_started
+      mock-laya:
         condition: service_started
 
   agent-core:
@@ -23,6 +28,10 @@ services:
       AGENT_MODEL_BASE_URL: http://mock-llm:8080/v1
       AGENT_MODEL_API_KEY: e2e
       AGENT_MODEL_NAME: e2e/mock
+      AGENT_LAYA_ENABLED: "true"
+      AGENT_LAYA_URL: http://mock-laya:8000
+      AGENT_LAYA_TIMEOUT_SECONDS: "5"
+      AGENT_LAYA_QUESTIONS_JSON: '{"request_type":{"type":"choice","instructions":"Classify the request type.","criteria":{"knowledge":"asks for information or explanation","action":"asks to perform or plan an action","other":"other"}}}'
       AGENT_MCP_SERVERS: http://ai-gateway:8200/mcp/
       AGENT_MCP_AUTH_TOKENS: ${RAG_E2E_TOKEN:-}
       AGENT_MCP_SERVER_NAMES: rag
@@ -31,12 +40,17 @@ services:
         condition: service_started
       mock-llm:
         condition: service_started
+      mock-laya:
+        condition: service_started
 
   mock-llm:
     image: mock-llm:e2e
 
   mock-retrieval:
     image: mock-retrieval:e2e
+
+  mock-laya:
+    image: mock-laya:e2e
 
   postgres:
     image: postgres:17-alpine
