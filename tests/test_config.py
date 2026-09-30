@@ -1,3 +1,5 @@
+import os
+
 import pytest
 
 from agent_core.config import Settings
@@ -5,9 +7,9 @@ from agent_core.config import Settings
 
 def test_service_urls_are_loaded_from_environment():
     settings = Settings()
-    assert settings.model_base_url == "http://llm-gateway:8080/v1"
-    assert settings.laya_url == "http://laya:8000"
-    assert "ai-gateway:8200/mcp" in settings.mcp_servers
+    assert settings.model_base_url == os.environ["AGENT_MODEL_BASE_URL"]
+    assert settings.laya_url == os.environ["AGENT_LAYA_URL"]
+    assert settings.mcp_servers == os.environ["AGENT_MCP_SERVERS"]
 
 
 def test_default_empty_mcp_auth_tokens_are_allowed():
@@ -20,11 +22,7 @@ def test_default_empty_mcp_auth_tokens_are_allowed():
 
 
 def test_mcp_auth_tokens_support_empty_slots():
-    settings = Settings(
-        mcp_servers="a,b",
-        mcp_auth_tokens="token,",
-        mcp_server_names="one,two",
-    )
+    settings = Settings(mcp_servers="a,b", mcp_auth_tokens="token,", mcp_server_names="one,two")
     configs = settings.mcp_server_configs()
     assert configs[0].url == "a"
     assert configs[0].auth_token == "token"
@@ -51,10 +49,6 @@ def test_mcp_server_names_must_be_unique_and_non_empty():
 
 
 def test_mcp_auth_tokens_must_align():
-    settings = Settings(
-        mcp_servers="a,b",
-        mcp_auth_tokens="token",
-        mcp_server_names="web,code",
-    )
+    settings = Settings(mcp_servers="a,b", mcp_auth_tokens="token", mcp_server_names="web,code")
     with pytest.raises(ValueError, match="AGENT_MCP_AUTH_TOKENS"):
         settings.mcp_server_configs()
