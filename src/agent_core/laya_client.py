@@ -6,7 +6,13 @@ from .observability import request_id
 
 
 class LayaClient:
-    def __init__(self, base_url: str, timeout_seconds: float = 5.0, api_key: str | None = None, transport: httpx.AsyncBaseTransport | None = None) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        timeout_seconds: float = 5.0,
+        api_key: str | None = None,
+        transport: httpx.AsyncBaseTransport | None = None,
+    ) -> None:
         self.base_url = base_url.rstrip("/")
         self.timeout_seconds = timeout_seconds
         self.api_key = api_key
