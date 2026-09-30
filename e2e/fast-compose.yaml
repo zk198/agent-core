@@ -18,7 +18,7 @@ services:
       mock-retrieval:
         condition: service_started
       mock-laya:
-        condition: service_started
+        condition: service_healthy
 
   agent-core:
     image: agent-core:e2e
@@ -51,6 +51,11 @@ services:
 
   mock-laya:
     image: mock-laya:e2e
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
 
   postgres:
     image: postgres:17-alpine
