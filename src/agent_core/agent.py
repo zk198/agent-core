@@ -15,6 +15,7 @@ from .mcp_client import (
     MCPToolResolutionError,
     validate_tool_arguments,
 )
+from .laya_client import LayaClient
 from .observability import current_trace, request_id
 
 logger = logging.getLogger(__name__)
@@ -109,6 +110,54 @@ class Agent:
             api_key=settings.model_api_key,
             timeout=settings.model_timeout_seconds,
         )
+        self.laya = LayaClient(settings.laya_url, settings.laya_timeout_seconds, settings.laya_api_key)
+
+    async def _laya_decision(self, state: object, *, parent_id: str | None = None) -> dict | None:
+        if not self.settings.laya_enabled or not self.settings.laya_questions_json.strip():
+            return None
+        trace = current_trace()
+        event_id = trace.event(
+            kind="system1",
+            stage="laya",
+            name="laya.systemone",
+            payload={"enabled": True, "model": "auto"},
+            parent_id=parent_id,
+        ) if trace else None
+        started = time.perf_counter()
+        try:
+            questions = json.loads(self.settings.laya_questions_json)
+            if not isinstance(questions, dict) or not questions:
+                raise ValueError("AGENT_LAYA_QUESTIONS_JSON must be a non-empty JSON object")
+            result = await self.laya.decide(state, questions)
+            latency = round((time.perf_counter() - started) * 1000, 1)
+            if trace and event_id:
+                trace.finish_event(
+                    event_id,
+                    duration_ms=latency,
+                    payload={
+                        "routing": _structured_value(result.get("routing")),
+                        "answers": _structured_value(result.get("answers")),
+                        "latency_ms": latency,
+                    },
+                )
+            if self.settings.laya_enforce:
+                allowed = result.get("answers", {}).get("allowed", {}).get("noul")
+                if allowed is not True:
+                    raise PermissionError("Laya guardrail denied or returned no allowed decision")
+            return result
+        except Exception as exc:
+            latency = round((time.perf_counter() - started) * 1000, 1)
+            if trace and event_id:
+                trace.finish_event(
+                    event_id,
+                    status="failed",
+                    duration_ms=latency,
+                    payload={"error": {"type": type(exc).__name__, "message": str(exc)}, "latency_ms": latency},
+                )
+            if self.settings.laya_enforce:
+                raise
+            logger.warning("laya_decision_failed request_id=%s error=%s", request_id(), type(exc).__name__)
+            return None
 
     async def run(
         self,
@@ -196,6 +245,8 @@ class Agent:
         evidence: list[CitationEvidence] = []
         tool_calls_total = 0
         trace = current_trace()
+
+        await self._laya_decision(input_messages, parent_id=agent_event)
         agent_event = None
         if trace:
             agent_event = trace.event(
@@ -413,6 +464,7 @@ class Agent:
                 },
                 status="running",
             )
+        await self._laya_decision(input_messages, parent_id=agent_event)
         tools = await self.registry.list_tools()
         if allowed_server_names is not None:
             tools = [tool for tool in tools if tool.server_name in allowed_server_names]
