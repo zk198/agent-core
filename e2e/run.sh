@@ -20,6 +20,8 @@ PY
 export AGENT_MODEL_BASE_URL="http://mock-llm:8080/v1"
 export AGENT_MODEL_API_KEY="e2e"
 export AGENT_MODEL_NAME="e2e/mock"
+export AGENT_LAYA_ENABLED="false"
+export AGENT_LAYA_URL="http://laya.invalid"
 export AGENT_MCP_SERVER_NAMES="rag"
 export AGENT_MCP_SERVERS="http://ai-gateway:8200/mcp/"
 export AGENT_MCP_AUTH_TOKENS="$RAG_E2E_TOKEN"

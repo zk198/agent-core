@@ -41,6 +41,8 @@ services:
       AGENT_MODEL_BASE_URL: http://mock-llm:8080/v1
       AGENT_MODEL_API_KEY: e2e
       AGENT_MODEL_NAME: e2e/mock
+      AGENT_LAYA_ENABLED: "false"
+      AGENT_LAYA_URL: http://laya.invalid
       AGENT_MCP_SERVERS: http://web:8001/mcp
       AGENT_MCP_SERVER_NAMES: web
     depends_on:

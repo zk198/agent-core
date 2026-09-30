@@ -36,7 +36,7 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
         with:
           repository: zk198/ai-gateway
-          ref: main
+          ref: phase-1d/laya-gateway
           path: ai-gateway
 
       - name: Build AI gateway image
@@ -50,6 +50,9 @@ jobs:
 
       - name: Build mock retrieval image
         run: docker build --progress=plain -t mock-retrieval:e2e -f e2e/mock-retrieval/Dockerfile .
+
+      - name: Build mock Laya image
+        run: docker build --progress=plain -t mock-laya:e2e -f e2e/mock-laya/Dockerfile .
 
       - name: Start mock services
         env:
@@ -81,6 +84,11 @@ jobs:
           RAG_JWT_SECRET: e2e-ci-only-secret
         run: sh ./e2e/run-fast.sh discover
 
+      - name: Run gateway Laya System-1 boundary
+        env:
+          RAG_JWT_SECRET: e2e-ci-only-secret
+        run: sh ./e2e/run-fast.sh laya-gateway
+
       - name: Run gateway session chat
         env:
           RAG_JWT_SECRET: e2e-ci-only-secret
@@ -90,6 +98,11 @@ jobs:
         env:
           RAG_JWT_SECRET: e2e-ci-only-secret
         run: sh ./e2e/run-fast.sh chat
+
+      - name: Run agent and gateway Laya trace propagation
+        env:
+          RAG_JWT_SECRET: e2e-ci-only-secret
+        run: sh ./e2e/run-fast.sh laya-trace
 
       - name: Run grounded answer stream
         env:
