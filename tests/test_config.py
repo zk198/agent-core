@@ -3,8 +3,10 @@ import pytest
 from agent_core.config import Settings
 
 
-def test_default_mcp_servers_include_rag_gateway():
+def test_service_urls_are_loaded_from_environment():
     settings = Settings()
+    assert settings.model_base_url == "http://llm-gateway:8080/v1"
+    assert settings.laya_url == "http://laya:8000"
     assert "ai-gateway:8200/mcp" in settings.mcp_servers
 
 
