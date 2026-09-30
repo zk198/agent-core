@@ -145,8 +145,14 @@ laya_gateway() {
     -H "X-Request-ID: phase1d-laya-gateway" \
     -d '{"state":{"message":"classify this request"},"questions":{"request_type":{"type":"choice","instructions":"Classify the request type.","criteria":{"knowledge":"asks for information or explanation","action":"asks to perform or plan an action","other":"other"}}}}' \
     http://localhost:18001/api/v1/systemone | tee "$log_dir/laya-gateway.json"
-  grep -q '"noul": true' "$log_dir/laya-gateway.json"
-  grep -q 'e2e/mock-laya' "$log_dir/laya-gateway.json"
+  python - "$log_dir/laya-gateway.json" <<'PY'
+import json
+import sys
+payload = json.load(open(sys.argv[1], encoding="utf-8"))
+assert payload["answers"]["allowed"]["noul"] is True
+assert payload["routing"]["model"] == "e2e/mock-laya"
+assert payload["trace_id"]
+PY
   log "gateway Laya boundary E2E passed"
 }
 
