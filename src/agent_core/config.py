@@ -13,6 +13,12 @@ class Settings(BaseSettings):
     max_tool_calls: int = Field(default=16, ge=1, le=64)
     max_tool_result_chars: int = Field(default=20_000, ge=1, le=200_000)
     context_reserve_chars: int = Field(default=4_000, ge=0, le=100_000)
+    laya_enabled: bool = False
+    laya_url: str = "http://laya:8000"
+    laya_timeout_seconds: float = Field(default=5.0, gt=0, le=60)
+    laya_api_key: str | None = None
+    laya_questions_json: str = ""
+    laya_enforce: bool = False
     mcp_servers: str = (
         "http://agent-tools-web:8001/mcp,"
         "http://agent-tools-code:8001/mcp,"
