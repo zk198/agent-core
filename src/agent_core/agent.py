@@ -245,8 +245,6 @@ class Agent:
         evidence: list[CitationEvidence] = []
         tool_calls_total = 0
         trace = current_trace()
-
-        await self._laya_decision(input_messages, parent_id=agent_event)
         agent_event = None
         if trace:
             agent_event = trace.event(
@@ -257,6 +255,7 @@ class Agent:
                     "system_prompt": system_prompt,
                 },
             )
+        await self._laya_decision(input_messages, parent_id=agent_event)
 
         for iteration in range(1, self.settings.max_iterations + 1):
             llm_started = time.perf_counter()
