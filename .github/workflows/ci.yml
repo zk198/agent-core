@@ -89,11 +89,6 @@ jobs:
           RAG_JWT_SECRET: e2e-ci-only-secret
         run: sh ./e2e/run-fast.sh laya-gateway
 
-      - name: Run agent and gateway Laya trace propagation
-        env:
-          RAG_JWT_SECRET: e2e-ci-only-secret
-        run: sh ./e2e/run-fast.sh laya-trace
-
       - name: Run gateway session chat
         env:
           RAG_JWT_SECRET: e2e-ci-only-secret
@@ -103,6 +98,11 @@ jobs:
         env:
           RAG_JWT_SECRET: e2e-ci-only-secret
         run: sh ./e2e/run-fast.sh chat
+
+      - name: Run agent and gateway Laya trace propagation
+        env:
+          RAG_JWT_SECRET: e2e-ci-only-secret
+        run: sh ./e2e/run-fast.sh laya-trace
 
       - name: Run grounded answer stream
         env:
