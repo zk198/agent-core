@@ -8,16 +8,16 @@ dependencies = [
   "fastmcp>=4.0.0,<5",
   "httpx>=0.28,<1",
   "jsonschema>=4.25,<5",
-  "openai>=1.107,<2",
+  "openai>=1.107,<4",
   "pydantic-settings>=2.10,<3",
   "uvicorn[standard]>=0.35,<1",
 ]
 [dependency-groups]
 dev = [
-  "mypy>=1.17,<2",
-  "pytest>=8.4,<9",
+  "mypy>=1.17,<3",
+  "pytest>=8.4,<10",
   "pytest-asyncio>=1.2,<2",
-  "pytest-cov>=6,<7",
+  "pytest-cov>=6,<8",
   "ruff>=0.13,<1",
 ]
 [tool.ruff]
