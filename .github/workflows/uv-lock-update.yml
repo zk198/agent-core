@@ -59,7 +59,7 @@ jobs:
           fi
 
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@://github.com"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           BRANCH="chore/update-uv-lock"
           git checkout -B "$BRANCH"
